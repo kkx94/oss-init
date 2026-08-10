@@ -125,7 +125,7 @@ test('docs=zh writes Chinese content as the main README', () => {
   }
 });
 
-test('ci/publish disabled skips .github directory', () => {
+test('ci/publish disabled skips workflows but keeps issue templates', () => {
   const { dir, result } = renderToTemp();
   try {
     rmSync(dir, { recursive: true, force: true });
@@ -139,7 +139,9 @@ test('ci/publish disabled skips .github directory', () => {
       publish: false,
     });
     assert.deepEqual(res.errors, []);
-    assert.equal(existsSync(join(newDir, '.github')), false);
+    assert.equal(existsSync(join(newDir, '.github', 'workflows')), false);
+    assert.ok(existsSync(join(newDir, '.github', 'ISSUE_TEMPLATE', 'bug_report.yml')));
+    assert.ok(existsSync(join(newDir, '.github', 'PULL_REQUEST_TEMPLATE.md')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

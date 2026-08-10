@@ -43,46 +43,32 @@ export function render({ templateRoot, targetDir, values, docs, ci, publish }) {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (entry.name === 'common') {
-      walkCommon(entry.name, '', filesWritten, warnings, errors, {
+      walkLang(entry.name, '', filesWritten, warnings, errors, {
         templateRoot,
         targetDir,
         values,
         docs,
         ci,
         publish,
+        isCommon: true,
       });
       continue;
     }
-    walk(entry.name, '', filesWritten, warnings, errors, {
+    walkLang(entry.name, '', filesWritten, warnings, errors, {
       templateRoot,
       targetDir,
       values,
       docs,
       ci,
       publish,
+      isCommon: false,
     });
   }
 
   return { filesWritten, warnings, errors };
 }
 
-function walkCommon(lang, relDir, filesWritten, warnings, errors, ctx) {
-  const absDir = join(ctx.templateRoot, lang, relDir);
-  const entries = readdirSync(absDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (entry.isDirectory()) continue;
-    const rel = entry.name;
-    if (rel === 'README.md.tpl' || rel === 'README.zh-CN.md.tpl') continue;
-    if (rel.startsWith('LICENSE.')) continue;
-
-    const content = readFileSync(join(absDir, rel), 'utf8');
-    const target = rel.endsWith('.tpl') ? rel.slice(0, -4) : rel;
-    writeRendered(ctx.targetDir, target, content, ctx.values, filesWritten, errors);
-  }
-}
-
-function walk(lang, relDir, filesWritten, warnings, errors, ctx) {
+function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
   const absDir = join(ctx.templateRoot, lang, relDir);
   const entries = readdirSync(absDir, { withFileTypes: true });
 
@@ -91,12 +77,17 @@ function walk(lang, relDir, filesWritten, warnings, errors, ctx) {
     const abs = join(absDir, entry.name);
 
     if (entry.isDirectory()) {
-      if (rel === '.github' && !ctx.ci && !ctx.publish) continue;
-      walk(lang, rel, filesWritten, warnings, errors, ctx);
+      if (rel === '.github/workflows' && !ctx.ci && !ctx.publish) continue;
+      walkLang(lang, rel, filesWritten, warnings, errors, ctx);
       continue;
     }
 
-    if (rel.startsWith('.github/')) {
+    if (ctx.isCommon) {
+      if (rel === 'README.md.tpl' || rel === 'README.zh-CN.md.tpl') continue;
+      if (rel.startsWith('LICENSE.')) continue;
+    }
+
+    if (rel.startsWith('.github/workflows/')) {
       if (rel.endsWith('ci.yml.tpl') && !ctx.ci) continue;
       if (rel.endsWith('release.yml.tpl') && !ctx.publish) continue;
     }

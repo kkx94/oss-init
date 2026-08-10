@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -128,6 +128,47 @@ test('generated project passes its own tests', () => {
       env: cleanEnv(),
     });
     assert.match(out, /pass/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('interactive wizard answers drive a full generation', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
+  try {
+    const child = spawn(process.execPath, [BIN, dir], {
+      env: cleanEnv(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => {
+      stdout += d;
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+    });
+    const answers = ['demo-app', '1', '1', '3', 'y', 'y'];
+    const writeAnswer = (i) => {
+      if (i < answers.length) {
+        child.stdin.write(`${answers[i]}\n`);
+        setTimeout(() => writeAnswer(i + 1), 150);
+      } else {
+        child.stdin.end();
+      }
+    };
+    setTimeout(() => writeAnswer(0), 300);
+
+    const code = await new Promise((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', resolve);
+    });
+
+    assert.equal(code, 0, `stdout: ${stdout}\nstderr: ${stderr}`);
+    assert.match(stdout, /Generated \d+ files/);
+    assert.match(stdout, /README\.zh-CN\.md/);
+    assert.ok(existsSync(join(dir, 'package.json')));
+    assert.ok(existsSync(join(dir, '.github', 'workflows', 'ci.yml')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
