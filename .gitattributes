@@ -1,0 +1,10 @@
+* text=auto
+
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.tpl text eol=lf
+*.sh text eol=lf
+bin/oss-init.js text eol=lf
