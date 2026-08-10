@@ -1,0 +1,38 @@
+{
+  "name": "oss-init",
+  "version": "0.1.0",
+  "description": "Scaffold a production-grade open source repository with professional README, LICENSE, CONTRIBUTING, SECURITY and GitHub Actions workflows �?in one command. Zero dependencies.",
+  "type": "module",
+  "bin": {
+    "oss-init": "bin/oss-init.js"
+  },
+  "main": "src/cli.js",
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "node --check bin/oss-init.js && node --check src/cli.js && node --check src/args.js && node --check src/validate.js && node --check src/prompts.js && node --check src/render.js"
+  },
+  "keywords": [
+    "cli",
+    "scaffolding",
+    "open-source",
+    "boilerplate",
+    "generator",
+    "zero-dependencies",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkx94/oss-init.git"
+  },
+  "author": "",
+  "dependencies": {},
+  "devDependencies": {}
+}
