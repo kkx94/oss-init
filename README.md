@@ -119,31 +119,65 @@ oss-init check --fix
 
 ## Preview
 
-```text
-$ oss-init my-lib --lang node --docs bilingual --ci
+Scaffold a project, init git, and make the first commit in one command:
 
-Generated 18 files in /path/to/my-lib:
+```text
+$ oss-init my-lib --lang node --docs bilingual --ci --publish --git
+
+Generated 19 files in /path/to/my-lib:
   README.md
   README.zh-CN.md
   LICENSE
+  AGENTS.md
   CONTRIBUTING.md
   CODE_OF_CONDUCT.md
   SECURITY.md
   CHANGELOG.md
-  AGENTS.md
   .gitignore
   .gitattributes
   package.json
   src/index.js
   test/index.test.js
   .github/workflows/ci.yml
+  .github/workflows/release.yml
   .github/ISSUE_TEMPLATE/bug_report.yml
   .github/ISSUE_TEMPLATE/feature_request.yml
+  .github/ISSUE_TEMPLATE/config.yml
   .github/PULL_REQUEST_TEMPLATE.md
 
-$ oss-init check ./my-lib --quiet
-oss-init check: ./my-lib scored 100/100
+Initialized git repo and made the first commit.
 ```
+
+Audit it immediately afterwards — the freshly scaffolded repo scores near-perfectly out of the box:
+
+```text
+$ oss-init check ./my-lib
+
+oss-init check
+  Auditing ./my-lib
+
+  ✓  README.md exists                       [readme]
+  ✓  README starts with a project title     [readmeTitle]
+  ✓  README has install/getting started     [readmeInstall]
+  ✓  README has usage/features section      [readmeUsage]
+  ✓  README mentions the license            [readmeLicense]
+  ✓  README is at least 200 words           [readmeLength]
+  ✓  LICENSE file is present                [license]
+  ✓  LICENSE is a real license text         [licenseReal]
+  ✓  CONTRIBUTING.md exists                 [contributing]
+  ✓  CODE_OF_CONDUCT.md exists              [codeOfConduct]
+  ✓  SECURITY.md exists                     [security]
+  ✓  CHANGELOG.md exists                    [changelog]
+  ✓  .gitignore exists                      [gitignore]
+  ✓  GitHub Actions CI workflow present     [ci]
+  ✓  Issue templates configured             [issueTemplates]
+  ✓  Pull request template configured       [prTemplate]
+  ✓  Project manifest present               [manifest]
+
+Score: 100 / 100  healthy
+```
+
+Add `--github` to the first command and the repo is also created on GitHub and pushed — one command from empty directory to published repository with CI.
 
 ## Development
 
