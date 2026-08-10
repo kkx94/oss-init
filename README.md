@@ -84,6 +84,18 @@ When the target directory is non-empty, `oss-init` lists the files it would over
 | CI/CD | `.github/workflows/ci.yml`, `.github/workflows/release.yml` (optional) |
 | Starter code | `src/index.js`, `test/index.test.js` (Node) or `src/<pkg>/__init__.py`, `tests/test_*.py` (Python) with passing tests |
 
+### Refresh a scaffolded repository (`update`)
+
+When you scaffold with `oss-init init`, a `.oss-init.json` manifest is written alongside the generated files. Later, when templates improve, refresh your repo:
+
+```bash
+oss-init update                # update files you haven't touched
+oss-init update --dry-run      # preview what would change
+oss-init update --force        # overwrite even files you've edited
+```
+
+`update` re-renders the templates with the same values used at `init` time and uses content hashes to distinguish files you have modified from ones that are untouched. Files you've edited are preserved by default; `--force` overwrites them.
+
 ### Audit a repository (`check`)
 
 ```bash
@@ -204,8 +216,8 @@ node bin/oss-init.js check
 ## Roadmap
 
 - [x] Python template — shipped in v0.2.0
+- [x] `oss-init update` — sync generated files in existing repositories — shipped in v0.2.0
 - [ ] Go template
-- [ ] `oss-init update` — sync generated files in existing repositories (#2)
 - [ ] `--template` for custom template directories (#3)
 - [ ] Configurable rule sets for `check`
 

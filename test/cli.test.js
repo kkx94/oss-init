@@ -289,3 +289,87 @@ test('oss-init repository checks itself at a high score', () => {
   const m = out.match(/scored (\d+)\/100/);
   assert.ok(Number(m[1]) >= 80, `self-check should be >= 80, got ${m[1]}`);
 });
+
+test('update writes a .oss-init.json manifest on init', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    assert.ok(existsSync(join(dir, '.oss-init.json')), 'manifest should exist');
+    const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'));
+    assert.equal(manifest.values.name, 'demo-app');
+    assert.equal(manifest.options.lang, 'node');
+    assert.ok(Object.keys(manifest.files).length > 10);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update is a no-op when nothing changed', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    const out = runCli(['update', dir]);
+    assert.match(out, /already up to date/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update skips user-modified files without --force', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+    writeFileSync(join(dir, 'README.md'), readme + '\n\n## Custom\n\nUser edit.\n');
+    const out = runCli(['update', dir]);
+    assert.match(out, /Skipped.*modified/);
+    assert.match(out, /README\.md/);
+    const after = readFileSync(join(dir, 'README.md'), 'utf8');
+    assert.match(after, /## Custom/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update --force overwrites user-modified files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+    writeFileSync(join(dir, 'README.md'), readme + '\n\n## Custom\n\nUser edit.\n');
+    runCli(['update', dir, '--force']);
+    const after = readFileSync(join(dir, 'README.md'), 'utf8');
+    assert.doesNotMatch(after, /## Custom/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update without manifest fails with a helpful message', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    writeFileSync(join(dir, 'README.md'), '# not an oss-init project\n');
+    assert.throws(
+      () => runCli(['update', dir]),
+      (err) => {
+        assert.match(err.stderr, /No \.oss-init\.json found/);
+        return true;
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update --dry-run previews without writing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const before = readFileSync(join(dir, 'LICENSE'), 'utf8');
+    runCli(['update', dir, '--dry-run', '--force']);
+    const after = readFileSync(join(dir, 'LICENSE'), 'utf8');
+    assert.equal(after, before, 'dry-run should not change files');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

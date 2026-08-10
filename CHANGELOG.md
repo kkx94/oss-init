@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Python template** (`--lang python`): `pyproject.toml` (Hatchling backend, PEP 621), `src/<package>/__init__.py` with real code, `tests/test_*.py` using `unittest` (zero dev deps to run), Python 3.10/3.11/3.12/3.13 CI matrix, and a release workflow that publishes to PyPI via trusted publishing. Closes #1.
+- **`oss-init update` subcommand**: refreshes files in a repository previously scaffolded with `oss-init init`. A `.oss-init.json` manifest written at scaffold time records render values and content hashes; `update` re-renders and uses the hashes to preserve files the user has modified (use `--force` to overwrite). Supports `--dry-run`. Closes #2.
 - `oss-init check` subcommand: audits a repository against 17 open source best-practice rules and prints a 0-100 health score, with `--json`, `--quiet`, and `--fix` (auto-patches missing community files, auto-detecting Node vs Python).
 - `--git` and `--github` flags for `init`: scaffold, `git init`, make the first commit, and (with `--github`) create a public GitHub repo and push — all in one command.
 - `--dry-run` flag for `init`: preview the files that would be generated without writing anything.

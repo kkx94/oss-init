@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { runInit, initHelpText } from './commands/init.js';
 import { runCheck, checkHelpText } from './commands/check.js';
+import { runUpdate, updateHelpText } from './commands/update.js';
 import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS } from './args.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -17,22 +18,23 @@ function readVersion() {
   }
 }
 
-const COMMANDS = new Set(['init', 'check']);
+const COMMANDS = new Set(['init', 'check', 'update']);
 
 function globalHelp() {
   return [
-    'oss-init - Scaffold and health-check production-grade open source repositories',
+    'oss-init - Scaffold, audit, and refresh open source repositories',
     '',
     'Usage:',
-    '  oss-init [target-dir] [options]        Scaffold a new repository (default command)',
-    '  oss-init init [target-dir] [options]    Scaffold a new repository',
-    '  oss-init check [target-dir] [options]   Audit an existing repository for OSS best practices',
+    '  oss-init [target-dir] [options]         Scaffold a new repository (default command)',
+    '  oss-init init [target-dir] [options]     Scaffold a new repository',
+    '  oss-init check [target-dir] [options]    Audit a repository for OSS best practices',
+    '  oss-init update [target-dir] [options]   Refresh files in a previously scaffolded repo',
     '',
     'Top-level options:',
     '  --help, -h     Show this help message (use with a command for command-specific help)',
     '  --version, -v  Show version',
     '',
-    'Run "oss-init init --help" or "oss-init check --help" for command-specific options.',
+    'Run "oss-init init --help", "oss-init check --help", or "oss-init update --help" for details.',
   ].join('\n');
 }
 
@@ -94,6 +96,29 @@ export async function main(argv) {
       return 0;
     }
     return runCheck(rest, { version });
+  }
+
+  if (command === 'update') {
+    const parsed = parseArgs(rest, [
+      { name: 'force', type: 'boolean', default: false },
+      { name: 'dry-run', type: 'boolean', default: false },
+      { name: 'help', type: 'boolean', default: false },
+      { name: 'version', type: 'boolean', default: false },
+    ]);
+    if (parsed.errors.length > 0) {
+      process.stderr.write(`${parsed.errors.join('\n')}\n\n`);
+      process.stderr.write(`${updateHelpText()}\n`);
+      return 1;
+    }
+    if (parsed.options.help) {
+      process.stdout.write(`${updateHelpText()}\n`);
+      return 0;
+    }
+    if (parsed.options.version) {
+      process.stdout.write(`${version}\n`);
+      return 0;
+    }
+    return runUpdate(rest, { version });
   }
 
   process.stdout.write(`${globalHelp()}\n`);

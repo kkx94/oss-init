@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import readline from 'node:readline/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -87,6 +88,37 @@ function listConflicts(targetDir) {
 function hasGh() {
   const out = spawnSync('gh', ['--version'], { shell: true, stdio: ['ignore', 'pipe', 'ignore'] });
   return out.status === 0;
+}
+
+export function sha256(content) {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+export function writeManifest(targetDir, filesWritten, values, opts) {
+  const manifest = {
+    version: '0.2.0',
+    values,
+    options: {
+      lang: opts.lang,
+      license: opts.license,
+      docs: opts.docs,
+      ci: opts.ci,
+      publish: opts.publish,
+      agents: opts.agents,
+    },
+    files: {},
+  };
+  for (const rel of filesWritten) {
+    try {
+      const content = readFileSync(join(targetDir, rel), 'utf8');
+      manifest.files[rel] = sha256(content);
+    } catch {
+      // file wasn't written (dry run) — skip
+    }
+  }
+  const manifestPath = join(targetDir, '.oss-init.json');
+  mkdirSync(join(manifestPath, '..'), { recursive: true });
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', { mode: 0o644 });
 }
 
 export async function runInit(argv, { version }) {
@@ -216,6 +248,8 @@ export async function runInit(argv, { version }) {
     process.stdout.write('\n(dry run — no files were written, no git or GitHub actions taken)\n');
     return 0;
   }
+
+  writeManifest(targetDir, result.filesWritten, values, opts);
 
   if (opts.github) {
     if (!hasGh()) {
