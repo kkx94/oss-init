@@ -102,17 +102,23 @@ test('full end-to-end generation succeeds and produces a usable project', () => 
       'CODE_OF_CONDUCT.md',
       'SECURITY.md',
       'CHANGELOG.md',
+      'AGENTS.md',
       'package.json',
       '.gitignore',
       'src/index.js',
       'test/index.test.js',
       '.github/workflows/ci.yml',
       '.github/workflows/release.yml',
+      '.github/ISSUE_TEMPLATE/bug_report.yml',
+      '.github/PULL_REQUEST_TEMPLATE.md',
     ]) {
       assert.ok(existsSync(join(dir, file)), `expected ${file}`);
     }
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
     assert.equal(pkg.name, 'demo-app');
+    const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf8');
+    assert.match(agents, /AGENTS\.md/);
+    assert.match(agents, /kkx94|your-username/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -172,4 +178,78 @@ test('interactive wizard answers drive a full generation', async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('--no-agents skips AGENTS.md', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--no-agents']);
+    assert.equal(existsSync(join(dir, 'AGENTS.md')), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('--init subcommand works the same as default', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
+  try {
+    const out = runCli(['init', dir, '--name', 'demo-app', '--docs', 'en']);
+    assert.match(out, /Generated \d+ files/);
+    assert.ok(existsSync(join(dir, 'README.md')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('check command scores the repo and prints the score', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    const out = runCli(['check', dir]);
+    assert.match(out, /Score:\s+\d+\s*\/\s*100/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('check --json outputs valid JSON with results', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    const out = runCli(['check', dir, '--json']);
+    const parsed = JSON.parse(out);
+    assert.equal(typeof parsed.score, 'number');
+    assert.ok(Array.isArray(parsed.results));
+    assert.ok(parsed.results.length >= 15);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('check --fix generates missing community files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-check-fix-'));
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'empty-repo' }) + '\n');
+    writeFileSync(join(dir, 'README.md'), '# empty-repo\n\nA bare repo. A bare repo. A bare repo.\n');
+    assert.equal(existsSync(join(dir, 'LICENSE')), false);
+    try {
+      runCli(['check', dir, '--fix']);
+    } catch (e) {
+      if (!/Generated/.test(e.stdout || '')) {
+        throw e;
+      }
+    }
+    assert.ok(existsSync(join(dir, 'LICENSE')), 'fix should generate LICENSE');
+    assert.ok(existsSync(join(dir, 'CONTRIBUTING.md')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('oss-init repository checks itself at a high score', () => {
+  const repoDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const out = runCli(['check', repoDir, '--quiet']);
+  assert.match(out, /scored \d+\/100/);
+  const m = out.match(/scored (\d+)\/100/);
+  assert.ok(Number(m[1]) >= 80, `self-check should be >= 80, got ${m[1]}`);
 });

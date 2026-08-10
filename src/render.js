@@ -18,7 +18,16 @@ const README_SPEC = {
   ],
 };
 
-export function render({ templateRoot, targetDir, values, docs, ci, publish }) {
+export function render({
+  templateRoot,
+  targetDir,
+  values,
+  docs,
+  ci,
+  publish,
+  agents = true,
+  onlyMissing = false,
+}) {
   const filesWritten = [];
   const warnings = [];
   const errors = [];
@@ -27,7 +36,7 @@ export function render({ templateRoot, targetDir, values, docs, ci, publish }) {
 
   for (const spec of readmeSpecs) {
     const content = readFileSync(join(templateRoot, 'common', spec.source), 'utf8');
-    writeRendered(targetDir, spec.target, content, values, filesWritten, errors);
+    writeRendered(targetDir, spec.target, content, values, filesWritten, errors, onlyMissing);
   }
 
   const licenseSource = `LICENSE.${values.license}.tpl`;
@@ -36,31 +45,38 @@ export function render({ templateRoot, targetDir, values, docs, ci, publish }) {
     errors.push(`License template not found: ${licenseSource}. Choose --license mit or apache-2.0.`);
   } else {
     const licenseContent = readFileSync(licenseAbs, 'utf8');
-    writeRendered(targetDir, 'LICENSE', licenseContent, values, filesWritten, errors);
+    writeRendered(targetDir, 'LICENSE', licenseContent, values, filesWritten, errors, onlyMissing);
   }
+
+  if (agents) {
+    const agentsAbs = join(templateRoot, 'common', 'AGENTS.md.tpl');
+    if (existsSync(agentsAbs)) {
+      writeRendered(
+        targetDir,
+        'AGENTS.md',
+        readFileSync(agentsAbs, 'utf8'),
+        values,
+        filesWritten,
+        errors,
+        onlyMissing,
+      );
+    }
+  }
+
+  const ctxBase = { templateRoot, targetDir, values, ci, publish, onlyMissing };
 
   const entries = readdirSync(templateRoot, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (entry.name === 'common') {
       walkLang(entry.name, '', filesWritten, warnings, errors, {
-        templateRoot,
-        targetDir,
-        values,
-        docs,
-        ci,
-        publish,
+        ...ctxBase,
         isCommon: true,
       });
       continue;
     }
     walkLang(entry.name, '', filesWritten, warnings, errors, {
-      templateRoot,
-      targetDir,
-      values,
-      docs,
-      ci,
-      publish,
+      ...ctxBase,
       isCommon: false,
     });
   }
@@ -85,6 +101,7 @@ function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
     if (ctx.isCommon) {
       if (rel === 'README.md.tpl' || rel === 'README.zh-CN.md.tpl') continue;
       if (rel.startsWith('LICENSE.')) continue;
+      if (rel === 'AGENTS.md.tpl') continue;
     }
 
     if (rel.startsWith('.github/workflows/')) {
@@ -94,11 +111,14 @@ function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
 
     const content = readFileSync(abs, 'utf8');
     const target = rel.endsWith('.tpl') ? rel.slice(0, -4) : rel;
-    writeRendered(ctx.targetDir, target, content, ctx.values, filesWritten, errors);
+    writeRendered(ctx.targetDir, target, content, ctx.values, filesWritten, errors, ctx.onlyMissing);
   }
 }
 
-function writeRendered(targetDir, target, content, values, filesWritten, errors) {
+function writeRendered(targetDir, target, content, values, filesWritten, errors, onlyMissing = false) {
+  const outPath = join(targetDir, target);
+  if (onlyMissing && existsSync(outPath)) return;
+
   const rendered = content.replace(PLACEHOLDER_RE, (match, key) => {
     if (values[key] === undefined) {
       errors.push(`Template value missing for "${match}" in ${target}`);
@@ -115,7 +135,6 @@ function writeRendered(targetDir, target, content, values, filesWritten, errors)
     return;
   }
 
-  const outPath = join(targetDir, target);
   mkdirSync(join(outPath, '..'), { recursive: true });
   writeFileSync(outPath, rendered, { mode: 0o644 });
   filesWritten.push(target);

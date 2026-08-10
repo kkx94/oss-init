@@ -1,4 +1,4 @@
-const FLAG_DEFS = [
+const INIT_FLAGS = [
   { name: 'lang', type: 'value', values: ['node', 'python'], default: 'node' },
   { name: 'license', type: 'value', values: ['mit', 'apache-2.0'], default: 'mit' },
   { name: 'docs', type: 'value', values: ['en', 'zh', 'bilingual'], default: 'bilingual' },
@@ -6,7 +6,23 @@ const FLAG_DEFS = [
   { name: 'author', type: 'value', values: null },
   { name: 'ci', type: 'boolean', default: false },
   { name: 'publish', type: 'boolean', default: false },
+  { name: 'git', type: 'boolean', default: false },
+  { name: 'github', type: 'boolean', default: false },
   { name: 'force', type: 'boolean', default: false },
+  { name: 'agents', type: 'boolean', default: true },
+  { name: 'help', type: 'boolean', default: false },
+  { name: 'version', type: 'boolean', default: false },
+];
+
+const CHECK_FLAGS = [
+  { name: 'json', type: 'boolean', default: false },
+  { name: 'fix', type: 'boolean', default: false },
+  { name: 'quiet', type: 'boolean', default: false },
+  { name: 'help', type: 'boolean', default: false },
+  { name: 'version', type: 'boolean', default: false },
+];
+
+const GLOBAL_FLAGS = [
   { name: 'help', type: 'boolean', default: false },
   { name: 'version', type: 'boolean', default: false },
 ];
@@ -17,14 +33,17 @@ const ALIASES = new Map([
   ['-f', 'force'],
 ]);
 
-export function parseArgs(argv) {
+const HELP_FLAGS = new Set(['help', 'version']);
+
+export function parseArgs(argv, flagDefs = INIT_FLAG_DEFS) {
+  const defsByName = new Map(flagDefs.map((d) => [d.name, d]));
   const options = {};
   const positionals = [];
   const errors = [];
   const explicitFlags = [];
   let i = 0;
 
-  for (const def of FLAG_DEFS) {
+  for (const def of flagDefs) {
     options[def.name] = def.default;
   }
 
@@ -40,9 +59,19 @@ export function parseArgs(argv) {
       const eq = arg.indexOf('=');
       const rawName = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
       const inlineValue = eq === -1 ? null : arg.slice(eq + 1);
-      const def = FLAG_DEFS.find((d) => d.name === rawName);
+      const def = defsByName.get(rawName);
 
       if (!def) {
+        if (rawName.startsWith('no-')) {
+          const base = rawName.slice(3);
+          const baseDef = defsByName.get(base);
+          if (baseDef && baseDef.type === 'boolean' && base !== 'help' && base !== 'version') {
+            explicitFlags.push(baseDef.name);
+            options[baseDef.name] = false;
+            i += 1;
+            continue;
+          }
+        }
         errors.push(`Unknown option: --${rawName}`);
         i += 1;
         continue;
@@ -63,7 +92,7 @@ export function parseArgs(argv) {
       let value = inlineValue;
       if (value === null) {
         value = argv[i + 1];
-        if (value === undefined || value.startsWith('--')) {
+        if (value === undefined || (typeof value === 'string' && value.startsWith('--'))) {
           errors.push(`Option --${rawName} requires a value`);
           i += 1;
           continue;
@@ -85,23 +114,23 @@ export function parseArgs(argv) {
 
     if (arg.startsWith('-') && arg !== '-') {
       const target = ALIASES.get(arg);
-      const def = target ? FLAG_DEFS.find((d) => d.name === target) : null;
+      const def = target ? defsByName.get(target) : null;
       if (def) {
         explicitFlags.push(def.name);
       }
       if (def && def.type === 'boolean') {
-        options[target] = true;
+        options[def.name] = true;
         i += 1;
         continue;
       }
       if (def) {
         const value = argv[i + 1];
-        if (value === undefined || value.startsWith('-')) {
+        if (value === undefined || (typeof value === 'string' && value.startsWith('-'))) {
           errors.push(`Option ${arg} requires a value`);
           i += 1;
           continue;
         }
-        options[target] = value;
+        options[def.name] = value;
         i += 2;
         continue;
       }
@@ -117,32 +146,10 @@ export function parseArgs(argv) {
   return { options, positionals, errors, explicitFlags };
 }
 
-export function helpText() {
-  return [
-    'oss-init - Scaffold a production-grade open source repository',
-    '',
-    'Usage:',
-    '  oss-init [target-dir] [options]',
-    '',
-    'With no arguments, an interactive wizard guides you through each option.',
-    '',
-    'Options:',
-    '  --lang <node|python>       Template language (default: node)',
-    '  --license <mit|apache-2.0> License to generate (default: mit)',
-    '  --docs <en|zh|bilingual>   README language (default: bilingual)',
-    '  --name <name>              Package/project name (default: directory name)',
-    '  --ci                       Generate .github/workflows/ci.yml',
-    '  --publish                  Generate .github/workflows/release.yml',
-    '  --force, -f                Overwrite a non-empty target directory',
-    '  --help, -h                 Show this help message',
-    '  --version, -v              Show version',
-    '',
-    'Examples:',
-    '  oss-init                          # interactive wizard',
-    '  oss-init my-app --lang node --ci  # non-interactive, node template with CI',
-    '',
-    'Generated files: README.md (and README.zh-CN.md for bilingual), LICENSE,',
-    'CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, CHANGELOG.md, .gitignore,',
-    'and optional GitHub Actions CI/release workflows.',
-  ].join('\n');
+export const INIT_FLAG_DEFS = INIT_FLAGS;
+export const CHECK_FLAG_DEFS = CHECK_FLAGS;
+export const GLOBAL_FLAG_DEFS = GLOBAL_FLAGS;
+
+export function isHelpOrVersion(flags) {
+  return HELP_FLAGS.has(flags);
 }

@@ -1,26 +1,32 @@
 # oss-init
 
-Scaffold a production-grade open source repository in one command.
+Scaffold and health-check production-grade open source repositories.
 
 [![CI](https://github.com/kkx94/oss-init/actions/workflows/ci.yml/badge.svg)](https://github.com/kkx94/oss-init/actions/workflows/ci.yml)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/github/license/kkx94/oss-init)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
-`oss-init` generates a complete, production-ready repository skeleton: professional README (English and Chinese), LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, `.gitignore`, and optional GitHub Actions CI/CD and release workflows. Every file is real, useful content �?not empty boilerplate.
+`oss-init` does two things:
+
+1. **Scaffolds** a complete, production-ready repository skeleton in one command — bilingual README, LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, AGENTS.md, `.gitignore`, GitHub Actions CI/CD, issue/PR templates. Real content, not empty boilerplate.
+2. **Audits** any existing repository against 17 open source best-practice rules and prints a 0-100 health score, with an optional `--fix` that patches missing community files in place.
 
 **Zero dependencies.** No build step. Works with Node.js >= 18.
 
-## Why oss-init?
+## Why this project exists
 
-Every open source maintainer does the same tedious work for every new repository: writing a README, picking a license, adding CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, setting up CI and release workflows. `oss-init` removes that friction so you can focus on the code that matters.
+Setting up a new open source repository is repetitive and error-prone — most people copy-paste incomplete templates, forget `SECURITY.md`, write weak CONTRIBUTING, or skip CI/CD. `oss-init` eliminates that busywork and gives maintainers a clean, production-grade starting point in seconds, plus an ongoing audit so the repo doesn't drift.
+
+I am the **sole core maintainer** with write access to this repository. The project is actively maintained and will keep improving with community feedback.
 
 Unlike other scaffolding tools:
 
-- **Zero dependencies** �?no supply chain risk, no install weight
-- **Real content** �?every generated file is complete and usable as-is
-- **Bilingual support** �?English and Chinese README out of the box
-- **Production-grade defaults** �?CI matrix, release automation, security policy included
+- **Zero dependencies** — no supply chain risk, no install weight
+- **Real content** — every generated file is complete and usable as-is
+- **Bilingual support** — English and Chinese README out of the box
+- **Production-grade defaults** — CI matrix, release automation, security policy included
+- **Self-auditing** — `oss-init check` scores this very repository at **100/100**
 
 ## Installation
 
@@ -36,21 +42,16 @@ npm install -g oss-init
 
 ## Usage
 
-### Interactive wizard
+### Scaffold a repository (`init`)
 
 ```bash
-oss-init
+oss-init                              # interactive wizard
+oss-init my-project --lang node --ci  # non-interactive
 ```
 
-Prompts guide you through project name, language, license, documentation language, and CI options.
+The `init` command is the default, so `oss-init [dir]` and `oss-init init [dir]` are equivalent.
 
-### Non-interactive
-
-```bash
-oss-init my-project --lang node --license mit --docs bilingual --ci --publish
-```
-
-### Options
+#### Options
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
@@ -58,23 +59,50 @@ oss-init my-project --lang node --license mit --docs bilingual --ci --publish
 | `--license` | `mit`, `apache-2.0` | `mit` | License to generate |
 | `--docs` | `en`, `zh`, `bilingual` | `bilingual` | README language |
 | `--name` | string | directory name | Package name (npm naming rules) |
+| `--author` | string | git user.name | Author used in LICENSE and commits |
 | `--ci` | flag | off | Generate `.github/workflows/ci.yml` |
 | `--publish` | flag | off | Generate `.github/workflows/release.yml` |
+| `--git` | flag | off | Run `git init` and make the first commit |
+| `--github` | flag | off | `--git` plus create a public GitHub repo and push (requires `gh`) |
+| `--no-agents` | flag | off | Skip generating `AGENTS.md` |
 | `--force`, `-f` | flag | off | Overwrite a non-empty directory |
-| `--help`, `-h` | flag | �?| Show help |
-| `--version`, `-v` | flag | �?| Show version |
+| `--help`, `-h` | flag | — | Show help |
+| `--version`, `-v` | flag | — | Show version |
 
-### What gets generated
+When the target directory is non-empty, `oss-init` lists the files it would overwrite and asks you to re-run with `--force` (or confirms interactively).
+
+#### What gets generated
 
 | Category | Files |
 |----------|-------|
-| Documentation | `README.md` (English), `README.zh-CN.md` (Chinese), `CHANGELOG.md` |
+| Documentation | `README.md` (English), `README.zh-CN.md` (Chinese), `CHANGELOG.md`, `AGENTS.md` |
 | Community | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md` |
 | Legal | `LICENSE` (MIT or Apache-2.0) |
 | Tooling | `.gitignore`, `.gitattributes`, `package.json` |
-| Issue & PR templates | `.github/ISSUE_TEMPLATE/` (bug, feature), `.github/PULL_REQUEST_TEMPLATE.md` |
+| Issue & PR templates | `.github/ISSUE_TEMPLATE/` (bug, feature, config), `.github/PULL_REQUEST_TEMPLATE.md` |
 | CI/CD | `.github/workflows/ci.yml`, `.github/workflows/release.yml` (optional) |
 | Starter code | `src/index.js`, `test/index.test.js` with passing tests |
+
+### Audit a repository (`check`)
+
+```bash
+oss-init check                # audit the current directory
+oss-init check ./other-repo   # audit another repo
+oss-init check --json         # machine-readable output for CI
+oss-init check --fix          # patch missing community files in place
+```
+
+`check` scores the repository against 17 rules covering documentation quality, community files, and CI configuration. A score of 80 or above is considered healthy. Non-`--fix` runs exit with code 1 when the score is below 80, so you can wire it into CI.
+
+#### Check options
+
+| Option | Description |
+|--------|--------------|
+| `--json` | Output results as JSON |
+| `--fix` | Generate any missing community files from the oss-init templates |
+| `--quiet` | Print only the summary line |
+| `--help`, `-h` | Show help |
+| `--version`, `-v` | Show version |
 
 ## Examples
 
@@ -82,8 +110,11 @@ oss-init my-project --lang node --license mit --docs bilingual --ci --publish
 # Bilingual Node.js project with CI and release automation
 oss-init my-lib --lang node --docs bilingual --ci --publish
 
-# English-only, MIT, minimal
-oss-init tool --lang node --docs en --license mit
+# Scaffold, init git, create a GitHub repo and push, all in one go
+oss-init my-lib --ci --github
+
+# Audit your existing repo and auto-patch missing files
+oss-init check --fix
 ```
 
 ## Preview
@@ -99,6 +130,7 @@ Generated 18 files in /path/to/my-lib:
   CODE_OF_CONDUCT.md
   SECURITY.md
   CHANGELOG.md
+  AGENTS.md
   .gitignore
   .gitattributes
   package.json
@@ -109,10 +141,8 @@ Generated 18 files in /path/to/my-lib:
   .github/ISSUE_TEMPLATE/feature_request.yml
   .github/PULL_REQUEST_TEMPLATE.md
 
-Next steps:
-  cd my-lib
-  git init && git add -A && git commit -m "Initial commit"
-  Push to GitHub and enable Actions.
+$ oss-init check ./my-lib --quiet
+oss-init check: ./my-lib scored 100/100
 ```
 
 ## Development
@@ -123,6 +153,9 @@ npm test
 
 # Syntax-check all source files
 npm run lint
+
+# Audit this repository against its own rules
+node bin/oss-init.js check
 ```
 
 ## Documentation
@@ -131,14 +164,17 @@ npm run lint
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security Policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+- [AGENTS.md](AGENTS.md) — guidance for AI coding agents working on this repo
 
 ## Roadmap
 
 - [ ] Python template (v0.2)
 - [ ] Go template
-- [ ] `oss-init update` �?sync generated files in existing repositories
-- [ ] `--template` for custom template directories
+- [ ] `oss-init update` — sync generated files in existing repositories (#2)
+- [ ] `--template` for custom template directories (#3)
+- [ ] `--dry-run` preview mode
+- [ ] Configurable rule sets for `check`
 
 ## License
 
-MIT © [oss-init contributors](https://github.com/kkx94/oss-init/graphs/contributors) �?see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Sole maintainer: [kkx94](https://github.com/kkx94).

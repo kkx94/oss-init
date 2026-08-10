@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseArgs, helpText } from '../src/args.js';
+import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS } from '../src/args.js';
+import { initHelpText } from '../src/commands/init.js';
+import { checkHelpText } from '../src/commands/check.js';
 
 test('parses value flags with separate value', () => {
   const { options, positionals, errors, explicitFlags } = parseArgs([
@@ -77,10 +79,31 @@ test('treats "--" as positionals separator', () => {
   assert.deepEqual(positionals, ['--not-a-flag']);
 });
 
-test('help text mentions key flags', () => {
-  const text = helpText();
+test('parses check flags against CHECK_FLAG_DEFS', () => {
+  const result = parseArgs(['--json', '--fix', 'some-repo'], CHECK_FLAG_DEFS);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.options.json, true);
+  assert.equal(result.options.fix, true);
+  assert.deepEqual(result.positionals, ['some-repo']);
+  assert.deepEqual(result.explicitFlags, ['json', 'fix']);
+});
+
+test('rejects init-only flag in check context', () => {
+  const { errors } = parseArgs(['--ci'], CHECK_FLAG_DEFS);
+  assert.ok(errors.some((e) => e.includes('Unknown option: --ci')));
+});
+
+test('init help text mentions key flags', () => {
+  const text = initHelpText();
   assert.match(text, /--lang/);
   assert.match(text, /--docs/);
   assert.match(text, /--ci/);
-  assert.match(text, /--version/);
+  assert.match(text, /--git/);
+  assert.match(text, /--github/);
+});
+
+test('check help text mentions key flags', () => {
+  const text = checkHelpText();
+  assert.match(text, /--json/);
+  assert.match(text, /--fix/);
 });
