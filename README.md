@@ -55,7 +55,7 @@ The `init` command is the default, so `oss-init [dir]` and `oss-init init [dir]`
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `--lang` | `node`, `python` | `node` | Template language (python planned for v0.2) |
+| `--lang` | `node`, `python` | `node` | Template language |
 | `--license` | `mit`, `apache-2.0` | `mit` | License to generate |
 | `--docs` | `en`, `zh`, `bilingual` | `bilingual` | README language |
 | `--name` | string | directory name | Package name (npm naming rules) |
@@ -79,10 +79,10 @@ When the target directory is non-empty, `oss-init` lists the files it would over
 | Documentation | `README.md` (English), `README.zh-CN.md` (Chinese), `CHANGELOG.md`, `AGENTS.md` |
 | Community | `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md` |
 | Legal | `LICENSE` (MIT or Apache-2.0) |
-| Tooling | `.gitignore`, `.gitattributes`, `package.json` |
+| Tooling | `.gitignore`, `.gitattributes`, `package.json` (Node) or `pyproject.toml` (Python) |
 | Issue & PR templates | `.github/ISSUE_TEMPLATE/` (bug, feature, config), `.github/PULL_REQUEST_TEMPLATE.md` |
 | CI/CD | `.github/workflows/ci.yml`, `.github/workflows/release.yml` (optional) |
-| Starter code | `src/index.js`, `test/index.test.js` with passing tests |
+| Starter code | `src/index.js`, `test/index.test.js` (Node) or `src/<pkg>/__init__.py`, `tests/test_*.py` (Python) with passing tests |
 
 ### Audit a repository (`check`)
 
@@ -203,7 +203,7 @@ node bin/oss-init.js check
 
 ## Roadmap
 
-- [ ] Python template (v0.2)
+- [x] Python template — shipped in v0.2.0
 - [ ] Go template
 - [ ] `oss-init update` — sync generated files in existing repositories (#2)
 - [ ] `--template` for custom template directories (#3)

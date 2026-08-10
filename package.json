@@ -1,6 +1,6 @@
 {
   "name": "oss-init",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scaffold a production-grade open source repository with professional README, LICENSE, CONTRIBUTING, SECURITY and GitHub Actions workflows �?in one command. Zero dependencies.",
   "type": "module",
   "bin": {

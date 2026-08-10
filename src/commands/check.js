@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -111,6 +111,9 @@ export function runCheck(argv, { version }) {
         licenseId: 'MIT',
         licenseTitle: 'MIT License',
       };
+      const lang = existsSync(join(targetDir, 'pyproject.toml')) && !existsSync(join(targetDir, 'package.json'))
+        ? 'python'
+        : 'node';
       const renderResult = render({
         templateRoot: TEMPLATE_ROOT,
         targetDir,
@@ -119,6 +122,7 @@ export function runCheck(argv, { version }) {
         ci: missing.some((r) => r.id === 'ci'),
         publish: false,
         agents: false,
+        lang,
       });
       if (renderResult.errors.length > 0) {
         for (const err of renderResult.errors) process.stderr.write(`${err}\n`);

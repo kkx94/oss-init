@@ -12,6 +12,7 @@ const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src',
 const BASE_VALUES = {
   name: 'demo-app',
   nameCamel: 'demoApp',
+  nameSnake: 'demo_app',
   description: 'A demo project.',
   year: '2026',
   author: 'Demo Author',
@@ -184,6 +185,31 @@ test('missing template value is reported as an error', () => {
       publish: false,
     });
     assert.ok(result.errors.length > 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('python template renders with snake_case package paths', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-render-'));
+  try {
+    const result = render({
+      templateRoot: TEMPLATE_ROOT,
+      targetDir: dir,
+      values: { ...BASE_VALUES, name: 'my-cool-lib', nameSnake: 'my_cool_lib' },
+      docs: 'en',
+      ci: true,
+      publish: true,
+      lang: 'python',
+    });
+    assert.deepEqual(result.errors, []);
+    assert.ok(existsSync(join(dir, 'pyproject.toml')));
+    assert.ok(existsSync(join(dir, 'src', 'my_cool_lib', '__init__.py')));
+    assert.ok(existsSync(join(dir, 'tests', 'test_my_cool_lib.py')));
+    assert.equal(existsSync(join(dir, 'package.json')), false);
+    const pyproject = readFileSync(join(dir, 'pyproject.toml'), 'utf8');
+    assert.match(pyproject, /my_cool_lib/);
+    assert.doesNotMatch(pyproject, /\{\{/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

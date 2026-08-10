@@ -28,6 +28,7 @@ export function render({
   agents = true,
   onlyMissing = false,
   dryRun = false,
+  lang = 'node',
 }) {
   const filesWritten = [];
   const warnings = [];
@@ -77,6 +78,7 @@ export function render({
       });
       continue;
     }
+    if (entry.name !== lang) continue;
     walkLang(entry.name, '', filesWritten, warnings, errors, {
       ...ctxBase,
       isCommon: false,
@@ -118,7 +120,14 @@ function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
 }
 
 function writeRendered(targetDir, target, content, values, filesWritten, errors, onlyMissing = false, dryRun = false) {
-  const outPath = join(targetDir, target);
+  const renderedTarget = target.replace(PLACEHOLDER_RE, (match, key) => {
+    if (values[key] === undefined) {
+      errors.push(`Template value missing for "${match}" in path ${target}`);
+      return match;
+    }
+    return String(values[key]);
+  });
+  const outPath = join(targetDir, renderedTarget);
   if (onlyMissing && existsSync(outPath)) return;
 
   const rendered = content.replace(PLACEHOLDER_RE, (match, key) => {
@@ -141,5 +150,5 @@ function writeRendered(targetDir, target, content, values, filesWritten, errors,
     mkdirSync(join(outPath, '..'), { recursive: true });
     writeFileSync(outPath, rendered, { mode: 0o644 });
   }
-  filesWritten.push(target);
+  filesWritten.push(renderedTarget);
 }

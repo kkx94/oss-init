@@ -43,14 +43,36 @@ test('unknown flag exits non-zero with a message', () => {
   );
 });
 
-test('python template reports coming-soon error', () => {
-  assert.throws(
-    () => runCli(['--lang', 'python', '--name', 'x']),
-    (err) => {
-      assert.match(err.stderr, /v0\.2/);
-      return true;
-    },
-  );
+test('python template now scaffolds a working Python project', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-'));
+  try {
+    const out = runCli([dir, '--name', 'my-cool-lib', '--lang', 'python', '--docs', 'en', '--ci']);
+    assert.match(out, /Generated \d+ files/);
+    assert.ok(existsSync(join(dir, 'pyproject.toml')));
+    assert.ok(existsSync(join(dir, 'src', 'my_cool_lib', '__init__.py')));
+    assert.ok(existsSync(join(dir, 'tests', 'test_my_cool_lib.py')));
+    assert.ok(existsSync(join(dir, '.github', 'workflows', 'ci.yml')));
+    assert.equal(existsSync(join(dir, 'package.json')), false);
+    assert.equal(existsSync(join(dir, 'src', 'index.js')), false);
+    const pyproject = readFileSync(join(dir, 'pyproject.toml'), 'utf8');
+    assert.match(pyproject, /requires-python/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('python template path placeholders are fully replaced', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-'));
+  try {
+    runCli([dir, '--name', 'demo-pkg', '--lang', 'python', '--docs', 'en']);
+    const init = readFileSync(join(dir, 'src', 'demo_pkg', '__init__.py'), 'utf8');
+    assert.doesNotMatch(init, /\{\{/);
+    const test = readFileSync(join(dir, 'tests', 'test_demo_pkg.py'), 'utf8');
+    assert.doesNotMatch(test, /\{\{/);
+    assert.match(test, /from demo_pkg import/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('invalid package name exits non-zero', () => {

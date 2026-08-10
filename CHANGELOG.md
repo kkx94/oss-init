@@ -7,14 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-10
+
 ### Added
 
-- `oss-init check` subcommand: audits a repository against 17 open source best-practice rules and prints a 0-100 health score, with `--json`, `--quiet`, and `--fix` (auto-patches missing community files).
+- **Python template** (`--lang python`): `pyproject.toml` (Hatchling backend, PEP 621), `src/<package>/__init__.py` with real code, `tests/test_*.py` using `unittest` (zero dev deps to run), Python 3.10/3.11/3.12/3.13 CI matrix, and a release workflow that publishes to PyPI via trusted publishing. Closes #1.
+- `oss-init check` subcommand: audits a repository against 17 open source best-practice rules and prints a 0-100 health score, with `--json`, `--quiet`, and `--fix` (auto-patches missing community files, auto-detecting Node vs Python).
 - `--git` and `--github` flags for `init`: scaffold, `git init`, make the first commit, and (with `--github`) create a public GitHub repo and push — all in one command.
 - `--dry-run` flag for `init`: preview the files that would be generated without writing anything.
 - `AGENTS.md` generation (on by default; opt out with `--no-agents`) — gives AI coding agents working on the new repo clear conventions.
 - Non-empty directory handling now lists the files that would be overwritten before requiring `--force`.
+- Path placeholders in template trees (e.g. `src/{{nameSnake}}/`) are now substituted, enabling language templates with dynamic package directories.
 - Self-audit: `oss-init check` scores this repository at 100/100.
+
+### Changed
+
+- CLI restructured around subcommands (`init`, `check`); bare `oss-init [dir]` still defaults to `init`.
+- `--no-<bool>` negation syntax supported for boolean flags.
+- `check --fix` auto-detects the project language from `pyproject.toml` vs `package.json`.
+- README rewritten with maintainer statement, full command reference, and check preview.
 
 ### Changed
 

@@ -105,10 +105,7 @@ export async function runInit(argv, { version }) {
   const defaultName = defaultNameFor(targetDir);
 
   if (finalOptions.lang === 'python') {
-    process.stderr.write(
-      'The Python template is planned for v0.2. Use --lang node for now.\n',
-    );
-    return 1;
+    // Python template is supported as of v0.2.
   }
 
   let opts = finalOptions;
@@ -178,6 +175,7 @@ export async function runInit(argv, { version }) {
   const values = {
     name,
     nameCamel: name.replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+    nameSnake: name.replace(/-/g, '_').replace(/^@/, ''),
     description: `A production-grade ${opts.lang} project, scaffolded with oss-init.`,
     year: String(new Date().getFullYear()),
     author,
@@ -196,6 +194,7 @@ export async function runInit(argv, { version }) {
     publish: opts.publish,
     agents: opts.agents,
     dryRun: opts['dry-run'],
+    lang: opts.lang,
   });
 
   for (const error of result.errors) {
