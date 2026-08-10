@@ -190,6 +190,20 @@ test('--no-agents skips AGENTS.md', () => {
   }
 });
 
+test('--dry-run previews files without writing anything', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-dry-'));
+  try {
+    const out = runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci', '--dry-run']);
+    assert.match(out, /Would generate \d+ files/);
+    assert.match(out, /dry run/);
+    assert.equal(existsSync(join(dir, 'README.md')), false);
+    assert.equal(existsSync(join(dir, 'package.json')), false);
+    assert.equal(existsSync(join(dir, '.github', 'workflows', 'ci.yml')), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('--init subcommand works the same as default', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
   try {

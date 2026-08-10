@@ -27,6 +27,7 @@ export function render({
   publish,
   agents = true,
   onlyMissing = false,
+  dryRun = false,
 }) {
   const filesWritten = [];
   const warnings = [];
@@ -36,7 +37,7 @@ export function render({
 
   for (const spec of readmeSpecs) {
     const content = readFileSync(join(templateRoot, 'common', spec.source), 'utf8');
-    writeRendered(targetDir, spec.target, content, values, filesWritten, errors, onlyMissing);
+    writeRendered(targetDir, spec.target, content, values, filesWritten, errors, onlyMissing, dryRun);
   }
 
   const licenseSource = `LICENSE.${values.license}.tpl`;
@@ -45,7 +46,7 @@ export function render({
     errors.push(`License template not found: ${licenseSource}. Choose --license mit or apache-2.0.`);
   } else {
     const licenseContent = readFileSync(licenseAbs, 'utf8');
-    writeRendered(targetDir, 'LICENSE', licenseContent, values, filesWritten, errors, onlyMissing);
+    writeRendered(targetDir, 'LICENSE', licenseContent, values, filesWritten, errors, onlyMissing, dryRun);
   }
 
   if (agents) {
@@ -59,11 +60,12 @@ export function render({
         filesWritten,
         errors,
         onlyMissing,
+        dryRun,
       );
     }
   }
 
-  const ctxBase = { templateRoot, targetDir, values, ci, publish, onlyMissing };
+  const ctxBase = { templateRoot, targetDir, values, ci, publish, onlyMissing, dryRun };
 
   const entries = readdirSync(templateRoot, { withFileTypes: true });
   for (const entry of entries) {
@@ -111,11 +113,11 @@ function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
 
     const content = readFileSync(abs, 'utf8');
     const target = rel.endsWith('.tpl') ? rel.slice(0, -4) : rel;
-    writeRendered(ctx.targetDir, target, content, ctx.values, filesWritten, errors, ctx.onlyMissing);
+    writeRendered(ctx.targetDir, target, content, ctx.values, filesWritten, errors, ctx.onlyMissing, ctx.dryRun);
   }
 }
 
-function writeRendered(targetDir, target, content, values, filesWritten, errors, onlyMissing = false) {
+function writeRendered(targetDir, target, content, values, filesWritten, errors, onlyMissing = false, dryRun = false) {
   const outPath = join(targetDir, target);
   if (onlyMissing && existsSync(outPath)) return;
 
@@ -135,7 +137,9 @@ function writeRendered(targetDir, target, content, values, filesWritten, errors,
     return;
   }
 
-  mkdirSync(join(outPath, '..'), { recursive: true });
-  writeFileSync(outPath, rendered, { mode: 0o644 });
+  if (!dryRun) {
+    mkdirSync(join(outPath, '..'), { recursive: true });
+    writeFileSync(outPath, rendered, { mode: 0o644 });
+  }
   filesWritten.push(target);
 }

@@ -65,6 +65,7 @@ The `init` command is the default, so `oss-init [dir]` and `oss-init init [dir]`
 | `--git` | flag | off | Run `git init` and make the first commit |
 | `--github` | flag | off | `--git` plus create a public GitHub repo and push (requires `gh`) |
 | `--no-agents` | flag | off | Skip generating `AGENTS.md` |
+| `--dry-run` | flag | off | Preview the files that would be generated without writing anything |
 | `--force`, `-f` | flag | off | Overwrite a non-empty directory |
 | `--help`, `-h` | flag | — | Show help |
 | `--version`, `-v` | flag | — | Show version |
@@ -206,7 +207,6 @@ node bin/oss-init.js check
 - [ ] Go template
 - [ ] `oss-init update` — sync generated files in existing repositories (#2)
 - [ ] `--template` for custom template directories (#3)
-- [ ] `--dry-run` preview mode
 - [ ] Configurable rule sets for `check`
 
 ## License

@@ -8,6 +8,7 @@ const INIT_FLAGS = [
   { name: 'publish', type: 'boolean', default: false },
   { name: 'git', type: 'boolean', default: false },
   { name: 'github', type: 'boolean', default: false },
+  { name: 'dry-run', type: 'boolean', default: false },
   { name: 'force', type: 'boolean', default: false },
   { name: 'agents', type: 'boolean', default: true },
   { name: 'help', type: 'boolean', default: false },

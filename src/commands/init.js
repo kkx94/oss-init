@@ -31,8 +31,9 @@ export function initHelpText() {
     '  --publish                  Generate .github/workflows/release.yml',
     '  --git                      Initialize a git repo and make the first commit',
     '  --github                   --git and create a public GitHub repo + push (requires gh)',
-    '  --no-agents                Skip generating AGENTS.md',
-    '  --force, -f                Overwrite a non-empty target directory',
+  '  --no-agents                Skip generating AGENTS.md',
+  '  --dry-run                  Preview the files that would be generated without writing anything',
+  '  --force, -f                Overwrite a non-empty target directory',
     '  --help, -h                 Show this help message',
     '  --version, -v              Show version',
     '',
@@ -97,7 +98,9 @@ export async function runInit(argv, { version }) {
     return 1;
   }
 
-  const interactive = explicitFlags.filter((f) => f !== 'git' && f !== 'github' && f !== 'agents').length === 0;
+  const interactive = explicitFlags
+    .filter((f) => f !== 'git' && f !== 'github' && f !== 'agents' && f !== 'dry-run')
+    .length === 0;
   const targetDir = resolve(positionals[0] ?? '.');
   const defaultName = defaultNameFor(targetDir);
 
@@ -124,6 +127,7 @@ export async function runInit(argv, { version }) {
     opts.git = finalOptions.git;
     opts.github = finalOptions.github;
     opts.agents = finalOptions.agents;
+    opts['dry-run'] = finalOptions['dry-run'];
   }
 
   const name = opts.name || defaultName;
@@ -162,7 +166,9 @@ export async function runInit(argv, { version }) {
     return 1;
   }
 
-  mkdirSync(targetDir, { recursive: true });
+  if (!opts['dry-run']) {
+    mkdirSync(targetDir, { recursive: true });
+  }
 
   const githubUser = opts.github
     ? gitConfig('user.name') || 'your-username'
@@ -189,6 +195,7 @@ export async function runInit(argv, { version }) {
     ci: opts.ci,
     publish: opts.publish,
     agents: opts.agents,
+    dryRun: opts['dry-run'],
   });
 
   for (const error of result.errors) {
@@ -198,12 +205,18 @@ export async function runInit(argv, { version }) {
     return 1;
   }
 
-  process.stdout.write(`\nGenerated ${result.filesWritten.length} files in ${targetDir}:\n`);
+  const verb = opts['dry-run'] ? 'Would generate' : 'Generated';
+  process.stdout.write(`\n${verb} ${result.filesWritten.length} files in ${targetDir}:\n`);
   for (const file of result.filesWritten) {
     process.stdout.write(`  ${file}\n`);
   }
 
   const nextSteps = [];
+
+  if (opts['dry-run']) {
+    process.stdout.write('\n(dry run — no files were written, no git or GitHub actions taken)\n');
+    return 0;
+  }
 
   if (opts.github) {
     if (!hasGh()) {
