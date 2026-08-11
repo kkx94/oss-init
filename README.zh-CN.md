@@ -85,6 +85,7 @@ oss-init my-project --lang node --ci  # 非交互式
 | `--name` | 字符串 | 目录名 | 项目/包名；Node.js 支持 npm scope |
 | `--author` | 字符串 | `git user.name` | 写入 LICENSE 和首次提交的作者 |
 | `--github-user` | 字符串 | 检测到的 `gh` 账号 | 生成仓库链接使用的 GitHub 用户名 |
+| `--template` | 目录 | 无 | 使用 `common/` 和 `<lang>/` 中的组织模板覆盖内置模板 |
 | `--ci` | 开关 | 关 | 生成 `.github/workflows/ci.yml` |
 | `--publish` | 开关 | 关 | 生成 `.github/workflows/release.yml` |
 | `--git` | 开关 | 关 | 初始化 Git 并创建首次提交 |
@@ -111,9 +112,30 @@ oss-init my-project --lang node --ci  # 非交互式
 
 生成的 Node.js CI 在 Linux 上测试 Node.js 22 和 24，并在 Windows 上测试 Node.js 24。生成的 Python CI 在 Linux 上测试 Python 3.10 至 3.13，并在 Windows 上测试 Python 3.13。两者都提供稳定的聚合检查名 `CI`，可用于分支保护。
 
+### 叠加组织模板
+
+使用 `--template <dir>` 可以保留内置基线，同时替换单个文件或添加组织专用文件。自定义目录沿用内置的 `common/`、`node/` 和 `python/` 结构：
+
+```text
+company-templates/
+├── common/
+│   ├── README.md.tpl
+│   └── NOTICE.md.tpl
+└── node/
+    └── docs/architecture.md.tpl
+```
+
+```bash
+oss-init my-service --lang node --template ./company-templates
+```
+
+`common/` 下的文件适用于两种语言，所选语言目录中的文件随后叠加。相同相对路径会覆盖内置模板，新路径会增加生成文件。模板文件名和 UTF-8 文本可以使用 `{{projectName}}`、`{{author}}` 等内置值；未知值会在写入任何项目文件之前报错。
+
+为保证后续更新可移植，`init` 会把本次选中的自定义模板文本写入 `.oss-init.json`，而不是记录本机源目录。即使源目录移动或删除，`update` 仍能复现相同文件，同时继续通过 manifest 哈希保护用户修改。符号链接、路径逃逸、保留的 `.git/` 与 `.oss-init.json` 目标、超过 200 个文件、单文件超过 256 KiB 或总快照超过 2 MiB 都会被拒绝。
+
 ### 更新已生成的仓库
 
-`init` 会写入 schema v1 的 `.oss-init.json` manifest，其中包含标准化的项目身份、渲染选项和 SHA-256 哈希。读取时会迁移 v0.2.x 和 v0.3.0 写入的 manifest。
+`init` 会写入 schema v2 的 `.oss-init.json` manifest，其中包含标准化的项目身份、渲染选项、SHA-256 哈希和可选的可移植自定义模板快照。schema v1 仍然兼容，读取时也会迁移 v0.2.x 和 v0.3.0 写入的 manifest。
 
 ```bash
 oss-init update                # 更新仍未被用户修改的生成文件
@@ -213,14 +235,13 @@ npm pack --dry-run --json
 
 - 已在公开仓库中使用 oss-init？[提交采用报告](https://github.com/kkx94/oss-init/issues/new?template=adoption.yml)。项目只会在验证后列入采用者；不会根据 star 或下载量推断采用。
 - 发现缺陷或有具体流程需求？[创建 Issue](https://github.com/kkx94/oss-init/issues/new/choose)。
-- 想贡献第一个 PR？自定义模板目录支持已在 [#3](https://github.com/kkx94/oss-init/issues/3) 列明范围，并标记为 `good first issue` / `help wanted`。
 
 ## 路线图
 
 - [x] Python 模板
 - [x] 带 manifest 迁移的安全生成文件更新
 - [x] 跨平台生成 CI
-- [ ] 自定义模板目录（[#3](https://github.com/kkx94/oss-init/issues/3)）
+- [x] 自定义模板目录（[#3](https://github.com/kkx94/oss-init/issues/3)）
 - [ ] `check` 可配置规则集
 - [ ] 根据用户需求增加其他语言模板
 

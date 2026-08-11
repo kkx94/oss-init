@@ -1,14 +1,19 @@
 import { createHash } from 'node:crypto';
-import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { isAbsolute, relative, resolve, win32 } from 'node:path';
+import { existsSync, lstatSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, win32 } from 'node:path';
 
 import { deriveProjectIdentity, deriveTemplateValues } from './project-identity.js';
 
-export const MANIFEST_SCHEMA_VERSION = 1;
+export const MANIFEST_SCHEMA_VERSION = 2;
 
 const LANGS = new Set(['node', 'python']);
 const LICENSES = new Set(['mit', 'apache-2.0']);
 const DOCS = new Set(['en', 'zh', 'bilingual']);
+const SUPPORTED_MANIFEST_SCHEMAS = new Set([1, MANIFEST_SCHEMA_VERSION]);
+const CUSTOM_TEMPLATE_SECTIONS = new Set(['common', 'node', 'python']);
+const MAX_CUSTOM_TEMPLATE_FILES = 200;
+const MAX_CUSTOM_TEMPLATE_FILE_BYTES = 256 * 1024;
+const MAX_CUSTOM_TEMPLATE_TOTAL_BYTES = 2 * 1024 * 1024;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
@@ -36,6 +41,13 @@ export function resolveContainedPath(root, rel) {
   const fromRoot = relative(rootPath, candidate);
   if (fromRoot === '' || fromRoot === '..' || fromRoot.startsWith(`..\\`) || fromRoot.startsWith('../') || isAbsolute(fromRoot)) {
     throw new Error(`Path resolves outside target directory: ${JSON.stringify(rel)}`);
+  }
+  let existingPath = rootPath;
+  for (const part of rel.split('/')) {
+    existingPath = join(existingPath, part);
+    if (existsSync(existingPath) && lstatSync(existingPath).isSymbolicLink()) {
+      throw new Error(`Path traverses a symbolic link: ${JSON.stringify(rel)}`);
+    }
   }
   return candidate;
 }
@@ -73,12 +85,59 @@ function normalizeLegacy(manifest) {
     }
   }
   return {
-    schemaVersion: MANIFEST_SCHEMA_VERSION,
+    schemaVersion: 1,
     generatorVersion: manifest.version,
     values,
     options,
     files: manifest.files,
   };
+}
+
+function validateCustomTemplates(customTemplates, errors) {
+  if (customTemplates === undefined) return;
+  if (!isObject(customTemplates)) {
+    errors.push('customTemplates must be an object whose keys are template-relative paths and values are UTF-8 text.');
+    return;
+  }
+
+  const entries = Object.entries(customTemplates);
+  if (entries.length === 0) {
+    errors.push('customTemplates must contain at least one template.');
+    return;
+  }
+  if (entries.length > MAX_CUSTOM_TEMPLATE_FILES) {
+    errors.push(`customTemplates cannot contain more than ${MAX_CUSTOM_TEMPLATE_FILES} files.`);
+  }
+
+  let totalBytes = 0;
+  for (const [sourceRel, content] of entries) {
+    if (!isSafeRelativePath(sourceRel)) {
+      errors.push(`customTemplates[${JSON.stringify(sourceRel)}] must be a safe relative path.`);
+    } else {
+      const slash = sourceRel.indexOf('/');
+      const section = slash === -1 ? sourceRel : sourceRel.slice(0, slash);
+      const rel = slash === -1 ? '' : sourceRel.slice(slash + 1);
+      if (!CUSTOM_TEMPLATE_SECTIONS.has(section) || rel === '') {
+        errors.push(
+          `customTemplates[${JSON.stringify(sourceRel)}] must start with common/, node/, or python/.`,
+        );
+      }
+    }
+    if (typeof content !== 'string') {
+      errors.push(`customTemplates[${JSON.stringify(sourceRel)}] must be a string.`);
+      continue;
+    }
+    const bytes = Buffer.byteLength(content);
+    totalBytes += bytes;
+    if (bytes > MAX_CUSTOM_TEMPLATE_FILE_BYTES) {
+      errors.push(
+        `customTemplates[${JSON.stringify(sourceRel)}] exceeds ${MAX_CUSTOM_TEMPLATE_FILE_BYTES} bytes.`,
+      );
+    }
+  }
+  if (totalBytes > MAX_CUSTOM_TEMPLATE_TOTAL_BYTES) {
+    errors.push(`customTemplates exceeds ${MAX_CUSTOM_TEMPLATE_TOTAL_BYTES} bytes in total.`);
+  }
 }
 
 function validateOptions(options, errors) {
@@ -201,8 +260,10 @@ export function parseAndValidateManifest(raw) {
   }
 
   const errors = [];
-  if (manifest.schemaVersion !== MANIFEST_SCHEMA_VERSION) {
-    errors.push(`Unsupported manifest schemaVersion ${JSON.stringify(manifest.schemaVersion)}; expected ${MANIFEST_SCHEMA_VERSION}.`);
+  if (!SUPPORTED_MANIFEST_SCHEMAS.has(manifest.schemaVersion)) {
+    errors.push(
+      `Unsupported manifest schemaVersion ${JSON.stringify(manifest.schemaVersion)}; expected 1 or ${MANIFEST_SCHEMA_VERSION}.`,
+    );
   }
   if (typeof manifest.generatorVersion !== 'string' || !VERSION_RE.test(manifest.generatorVersion)) {
     errors.push('generatorVersion must be a semantic version such as "0.3.1".');
@@ -210,28 +271,32 @@ export function parseAndValidateManifest(raw) {
   validateOptions(manifest.options, errors);
   validateValues(manifest.values, manifest.options, errors);
   validateFiles(manifest.files, errors);
+  validateCustomTemplates(manifest.customTemplates, errors);
 
   if (errors.length > 0) return { ok: false, errors };
-  return {
-    ok: true,
-    manifest: {
-      schemaVersion: MANIFEST_SCHEMA_VERSION,
-      generatorVersion: manifest.generatorVersion,
-      values: { ...manifest.values },
-      options: { ...manifest.options },
-      files: { ...manifest.files },
-    },
+  const validatedManifest = {
+    schemaVersion: manifest.schemaVersion,
+    generatorVersion: manifest.generatorVersion,
+    values: { ...manifest.values },
+    options: { ...manifest.options },
+    files: { ...manifest.files },
   };
+  if (manifest.customTemplates !== undefined) {
+    validatedManifest.customTemplates = { ...manifest.customTemplates };
+  }
+  return { ok: true, manifest: validatedManifest };
 }
 
-export function createManifest({ generatorVersion, values, options, files }) {
-  const result = parseAndValidateManifest({
+export function createManifest({ generatorVersion, values, options, files, customTemplates }) {
+  const candidate = {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
     generatorVersion,
     values,
     options,
     files,
-  });
+  };
+  if (customTemplates !== undefined) candidate.customTemplates = customTemplates;
+  const result = parseAndValidateManifest(candidate);
   if (!result.ok) {
     throw new Error(`Cannot create manifest:\n${result.errors.join('\n')}`);
   }

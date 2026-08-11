@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `--template <dir>` for safe organization template overlays, including built-in overrides, new files, Node.js/Python sections, preflight placeholder validation, and portable update snapshots. Closes #3.
 - Added a zero-dependency GitHub Action that audits checked-out repositories, enforces a configurable score threshold, publishes a `score` output, and writes a detailed job summary.
 - Added a reproducible end-to-end demo that scaffolds, tests, audits, and previews updates for temporary Node.js and Python projects; parent CI runs it on every change.
 - Added a structured adoption-report issue template for public downstream projects.
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Advanced `.oss-init.json` to schema v2 while retaining schema v1 and legacy manifest compatibility; custom snapshots never store machine-specific source paths.
 - Expanded generated READMEs with concrete customization, development, and release guidance.
 - Made the hygiene audit recognize Chinese section headings and measure Chinese prose without relying on whitespace-delimited word counts.
 
