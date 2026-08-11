@@ -6,7 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseArgs, INIT_FLAG_DEFS } from '../args.js';
-import { defaultNameFor, dirExists, dirIsEmpty, isWritable, validateName } from '../validate.js';
+import { baseName, camelCase, defaultNameFor, dirExists, dirIsEmpty, isWritable, snakeCase, validateName, validatePythonName } from '../validate.js';
 import { promptForConflictOverwrite, promptForOptions } from '../prompts.js';
 import { render } from '../render.js';
 
@@ -47,6 +47,16 @@ export function initHelpText() {
 function gitConfig(key) {
   try {
     return execSync(`git config --get ${key}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return '';
+  }
+}
+
+function ghApiUser() {
+  try {
+    return execSync('gh api user --jq .login', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {
@@ -177,7 +187,7 @@ export async function runInit(argv, { version }) {
   }
 
   const name = opts.name || defaultName;
-  const nameCheck = validateName(name);
+  const nameCheck = opts.lang === 'python' ? validatePythonName(name) : validateName(name);
   if (!nameCheck.ok) {
     process.stderr.write(`${nameCheck.errors.join('\n')}\n`);
     return 1;
@@ -216,16 +226,23 @@ export async function runInit(argv, { version }) {
     mkdirSync(targetDir, { recursive: true });
   }
 
+  const projectBase = baseName(name);
+  const repoName = projectBase;
+  const detectedGhUser = ghApiUser();
+  const detectedGitUser = gitConfig('user.name');
   const githubUser = opts.github
-    ? gitConfig('user.name') || 'your-username'
-    : gitConfig('user.name') || 'your-username';
-  const author = opts.author || githubUser || name;
+    ? detectedGhUser || detectedGitUser || 'your-username'
+    : detectedGhUser || detectedGitUser || 'your-username';
+  const author = opts.author || githubUser || projectBase;
 
   const values = {
     name,
-    nameCamel: name.replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
-    nameSnake: name.replace(/-/g, '_').replace(/^@/, ''),
-    description: `A production-grade ${opts.lang} project, scaffolded with oss-init.`,
+    packageName: name,
+    projectBase,
+    repoName,
+    nameCamel: camelCase(name),
+    nameSnake: snakeCase(name),
+    description: `A ${opts.lang} project, scaffolded with oss-init.`,
     year: String(new Date().getFullYear()),
     author,
     githubUser,

@@ -2,6 +2,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const NAME_PATTERN = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+const PYTHON_NAME_PATTERN = /^[a-z0-9-~][a-z0-9-._~]*$/;
 
 export function validateName(name) {
   const errors = [];
@@ -26,6 +27,47 @@ export function validateName(name) {
 
 export function isValidName(name) {
   return validateName(name).ok;
+}
+
+export function validatePythonName(name) {
+  const errors = [];
+  if (!name || name.trim() === '') {
+    errors.push('Project name must not be empty.');
+    return { ok: false, errors };
+  }
+  if (name.startsWith('@')) {
+    errors.push(
+      'Python project names cannot use npm scoped syntax (@scope/pkg). Use a plain name like "my-app" with --lang python.',
+    );
+    return { ok: false, errors };
+  }
+  if (!PYTHON_NAME_PATTERN.test(name)) {
+    errors.push(
+      'Python project name must use lowercase letters, digits, hyphens, underscores, dots and tildes only (e.g. "my-app").',
+    );
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+export function isValidPythonName(name) {
+  return validatePythonName(name).ok;
+}
+
+export function baseName(name) {
+  if (name.startsWith('@')) {
+    const idx = name.indexOf('/');
+    return idx === -1 ? name.slice(1) : name.slice(idx + 1);
+  }
+  return name;
+}
+
+export function snakeCase(name) {
+  return baseName(name).replace(/-/g, '_');
+}
+
+export function camelCase(name) {
+  const base = baseName(name);
+  return base.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
 export function dirIsEmpty(dir) {

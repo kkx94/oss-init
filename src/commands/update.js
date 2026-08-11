@@ -99,6 +99,26 @@ export function runUpdate(argv, { version }) {
   const values = manifest.values || {};
   const lang = opts.lang || 'node';
 
+  const rejectedPaths = [];
+  const manifestPaths = Object.keys(manifest.files || {});
+  for (const rel of manifestPaths) {
+    if (!isSafeRelative(rel)) rejectedPaths.push(rel);
+  }
+  for (const key of ['name', 'nameSnake', 'nameCamel', 'githubUser']) {
+    const v = values[key];
+    if (typeof v === 'string' && v.includes('..')) {
+      process.stderr.write(
+        `Manifest value "${key}" contains ".." and could escape the target directory via template paths. Refusing to update.\n`,
+      );
+      return 1;
+    }
+  }
+  if (rejectedPaths.length > 0) {
+    process.stderr.write(`\nRejected ${rejectedPaths.length} manifest path(s) that escape the target directory:\n`);
+    for (const rel of rejectedPaths) process.stderr.write(`  x ${rel}\n`);
+    return 1;
+  }
+
   const tmpDir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
   let rendered;
   try {
@@ -129,10 +149,9 @@ export function runUpdate(argv, { version }) {
   const added = [];
 
   for (const rel of rendered.filesWritten) {
-    if (!isSafeRelative(rel)) {
-      rejectedPaths.push(rel);
-      continue;
-    }
+    // Manifest paths are pre-validated; defensively skip any rendered
+    // path that would escape the target directory.
+    if (!isSafeRelative(rel)) continue;
     const newContent = readFileSync(join(tmpDir, rel), 'utf8');
     const newHash = sha256(newContent);
     const manifestHash = manifest.files[rel];
@@ -170,13 +189,10 @@ export function runUpdate(argv, { version }) {
 
   const removed = [];
   const skippedRetiredModified = [];
-  const rejectedPaths = [];
   for (const rel of Object.keys(manifest.files || {})) {
     if (!rendered.filesWritten.includes(rel)) {
-      if (!isSafeRelative(rel)) {
-        rejectedPaths.push(rel);
-        continue;
-      }
+      // Path safety already validated up front, but double-check defensively.
+      if (!isSafeRelative(rel)) continue;
       const currentPath = join(targetDir, rel);
       if (!existsSync(currentPath)) continue;
 
@@ -231,11 +247,6 @@ export function runUpdate(argv, { version }) {
   if (skippedRetiredModified.length > 0) {
     process.stdout.write(`\nSkipped ${skippedRetiredModified.length} retired file(s) you have modified (use --force to remove):\n`);
     for (const rel of skippedRetiredModified) process.stdout.write(`  ! ${rel}\n`);
-  }
-  if (rejectedPaths.length > 0) {
-    process.stderr.write(`\nRejected ${rejectedPaths.length} manifest path(s) that escape the target directory:\n`);
-    for (const rel of rejectedPaths) process.stderr.write(`  x ${rel}\n`);
-    return 1;
   }
   if (skippedUserModified.length > 0) {
     process.stdout.write(`\nSkipped ${skippedUserModified.length} file(s) you have modified (use --force to overwrite):\n`);
