@@ -15,7 +15,7 @@
 2. **检查**现有仓库的 17 项开源卫生规则。分数只衡量文件是否齐全与基本文档质量，不代表项目重要性、安全性或采用情况。
 3. **更新**早期 `oss-init` 生成的文件，默认保留用户已修改的内容。
 
-该 CLI 没有运行时依赖，也不需要构建步骤，支持 Node.js 22 及更高版本。
+该 CLI 没有运行时依赖，也不需要构建步骤，支持 Node.js 22 及更高版本。仓库还提供一个零依赖 GitHub Action，可在 CI 中强制执行卫生检查。
 
 ## 安装与项目状态
 
@@ -141,6 +141,37 @@ oss-init check --fix           # 添加缺失的社区文件
 | `--quiet` | 只输出摘要 |
 | `--help`, `-h` | 显示帮助 |
 | `--version`, `-v` | 显示版本 |
+
+### 在 GitHub Actions 中执行检查
+
+该 Action 会检查已 checkout 的仓库，写入详细的任务摘要，在分数低于可配置阈值时失败，并通过 `steps.<id>.outputs.score` 输出数字分数。
+
+```yaml
+name: Repository hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: oss-hygiene
+        uses: kkx94/oss-init@main
+        with:
+          fail-below: "80"
+      - run: echo "Hygiene score ${{ steps.oss-hygiene.outputs.score }}/100"
+```
+
+`path` 默认为仓库根目录，并且必须位于 checkout 工作区之内。`fail-below` 接受 0 至 100 的整数，默认为 80。
+
+在首个包含该 Action 的版本打 tag 之前，`@main` 只是预览通道。如果需要固定供应链输入，请绑定完整 commit SHA，并有意识地更新该 SHA。
 
 ## 示例
 
