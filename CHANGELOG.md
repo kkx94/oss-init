@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped Node.js package names keep their npm identity while repository names and JavaScript identifiers use safe unscoped forms.
 - Python project names now reject npm scopes and safely derive import names from dots, hyphens, digits, and Python keywords.
 - Node.js 22 is now the minimum supported runtime. Parent CI covers Node.js 22, 24, and 26 on Linux plus Node.js 24 on Windows.
-- GitHub Actions use current Node.js 24-based major versions (`checkout@v5`, `setup-node@v5`, and `setup-python@v6`) in the parent repository and generated workflows.
+- GitHub Actions use current Node.js 24-based major versions (`checkout@v7`, `setup-node@v7`, `setup-python@v7`, and `action-gh-release@v3`) in the parent repository and generated workflows.
 - Generated documentation and workflows now reflect the selected Node.js or Python project type instead of mixing ecosystem-specific instructions.
 - Release automation now creates a GitHub Release only after npm publication, public registry read-back, and a clean `npx` acceptance check succeed.
 
