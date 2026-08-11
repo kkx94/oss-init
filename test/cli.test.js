@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -158,6 +158,63 @@ test('generated project passes its own tests', () => {
       env: cleanEnv(),
     });
     assert.match(out, /pass/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('scoped Node package generates valid unscoped repository metadata', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-scoped-'));
+  try {
+    runCli([
+      dir,
+      '--name',
+      '@scope/my-lib',
+      '--lang',
+      'node',
+      '--docs',
+      'en',
+      '--github-user',
+      'octocat',
+    ]);
+    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+    const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'));
+    assert.equal(pkg.name, '@scope/my-lib');
+    assert.equal(manifest.values.repoName, 'my-lib');
+    assert.equal(manifest.values.jsIdentifier, 'myLib');
+    const out = execFileSync(process.execPath, ['--test'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: cleanEnv(),
+    });
+    assert.match(out, /pass/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Python rejects npm scope syntax before writing project files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-scope-'));
+  try {
+    assert.throws(
+      () => runCli([dir, '--name', '@scope/my-lib', '--lang', 'python', '--docs', 'en']),
+      (err) => {
+        assert.match(err.stderr, /Python project names cannot use npm scoped syntax/);
+        return true;
+      },
+    );
+    assert.deepEqual(readdirSync(dir), []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Python normalizes distribution separators into a safe import package', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-name-'));
+  try {
+    runCli([dir, '--name', 'my.cool-lib', '--lang', 'python', '--docs', 'en']);
+    assert.ok(existsSync(join(dir, 'src', 'my_cool_lib', '__init__.py')));
+    assert.ok(existsSync(join(dir, 'tests', 'test_my_cool_lib.py')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

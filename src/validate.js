@@ -1,8 +1,8 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
-const NAME_PATTERN = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
-const PYTHON_NAME_PATTERN = /^[a-z0-9-~][a-z0-9-._~]*$/;
+const NAME_PATTERN = /^(?:@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/;
+const PYTHON_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 export function validateName(name) {
   const errors = [];
@@ -43,7 +43,7 @@ export function validatePythonName(name) {
   }
   if (!PYTHON_NAME_PATTERN.test(name)) {
     errors.push(
-      'Python project name must use lowercase letters, digits, hyphens, underscores, dots and tildes only (e.g. "my-app").',
+      'Python project name must start and end with a lowercase letter or digit and use only letters, digits, hyphens, underscores, and dots (e.g. "my-app").',
     );
   }
   return { ok: errors.length === 0, errors };
@@ -51,23 +51,6 @@ export function validatePythonName(name) {
 
 export function isValidPythonName(name) {
   return validatePythonName(name).ok;
-}
-
-export function baseName(name) {
-  if (name.startsWith('@')) {
-    const idx = name.indexOf('/');
-    return idx === -1 ? name.slice(1) : name.slice(idx + 1);
-  }
-  return name;
-}
-
-export function snakeCase(name) {
-  return baseName(name).replace(/-/g, '_');
-}
-
-export function camelCase(name) {
-  const base = baseName(name);
-  return base.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
 export function dirIsEmpty(dir) {

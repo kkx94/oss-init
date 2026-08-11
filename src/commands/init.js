@@ -1,4 +1,4 @@
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import readline from 'node:readline/promises';
@@ -6,7 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseArgs, INIT_FLAG_DEFS } from '../args.js';
-import { baseName, camelCase, defaultNameFor, dirExists, dirIsEmpty, isWritable, snakeCase, validateName, validatePythonName } from '../validate.js';
+import { deriveProjectIdentity, resolveGithubMetadata } from '../project-identity.js';
+import { defaultNameFor, dirExists, dirIsEmpty, isWritable, validateName } from '../validate.js';
 import { promptForConflictOverwrite, promptForOptions } from '../prompts.js';
 import { render } from '../render.js';
 
@@ -28,6 +29,7 @@ export function initHelpText() {
     '  --docs <en|zh|bilingual>   README language (default: bilingual)',
     '  --name <name>              Package/project name (default: directory name)',
     '  --author <name>            License/commit author',
+    '  --github-user <login>      GitHub login for generated repository links',
     '  --ci                       Generate .github/workflows/ci.yml',
     '  --publish                  Generate .github/workflows/release.yml',
     '  --git                      Initialize a git repo and make the first commit',
@@ -46,7 +48,7 @@ export function initHelpText() {
 
 function gitConfig(key) {
   try {
-    return execSync(`git config --get ${key}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+    return execFileSync('git', ['config', '--get', key], { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {
@@ -56,7 +58,7 @@ function gitConfig(key) {
 
 function ghApiUser() {
   try {
-    return execSync('gh api user --jq .login', { stdio: ['ignore', 'pipe', 'ignore'] })
+    return execFileSync('gh', ['api', 'user', '--jq', '.login'], { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {
@@ -65,7 +67,7 @@ function ghApiUser() {
 }
 
 function whichGit() {
-  const out = spawnSync('git', ['--version'], { shell: true });
+  const out = spawnSync('git', ['--version'], { stdio: 'ignore' });
   return out.status === 0;
 }
 
@@ -96,18 +98,17 @@ function listConflicts(targetDir) {
 }
 
 function hasGh() {
-  const out = spawnSync('gh', ['--version'], { shell: true, stdio: ['ignore', 'pipe', 'ignore'] });
+  const out = spawnSync('gh', ['--version'], { stdio: ['ignore', 'pipe', 'ignore'] });
   return out.status === 0;
 }
 
 function gitInitAndCommit(targetDir) {
-  spawnSync('git', ['init'], { cwd: targetDir, stdio: 'ignore', shell: true });
-  spawnSync('git', ['add', '-A'], { cwd: targetDir, stdio: 'ignore', shell: true });
+  spawnSync('git', ['init'], { cwd: targetDir, stdio: 'ignore' });
+  spawnSync('git', ['add', '-A'], { cwd: targetDir, stdio: 'ignore' });
   const msg = 'Initial commit (scaffolded with oss-init)';
   const committed = spawnSync('git', ['commit', '-m', msg], {
     cwd: targetDir,
     stdio: 'ignore',
-    shell: true,
   });
   if (committed.status === 0) {
     process.stdout.write(`\nInitialized git repo and made the first commit.\n`);
@@ -187,9 +188,11 @@ export async function runInit(argv, { version }) {
   }
 
   const name = opts.name || defaultName;
-  const nameCheck = opts.lang === 'python' ? validatePythonName(name) : validateName(name);
-  if (!nameCheck.ok) {
-    process.stderr.write(`${nameCheck.errors.join('\n')}\n`);
+  let identity;
+  try {
+    identity = deriveProjectIdentity(name, opts.lang);
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
     return 1;
   }
 
@@ -226,26 +229,25 @@ export async function runInit(argv, { version }) {
     mkdirSync(targetDir, { recursive: true });
   }
 
-  const projectBase = baseName(name);
-  const repoName = projectBase;
-  const detectedGhUser = ghApiUser();
+  const detectedGhUser = opts['github-user'] ? '' : ghApiUser();
   const detectedGitUser = gitConfig('user.name');
-  const githubUser = opts.github
-    ? detectedGhUser || detectedGitUser || 'your-username'
-    : detectedGhUser || detectedGitUser || 'your-username';
-  const author = opts.author || githubUser || projectBase;
+  const metadata = resolveGithubMetadata({
+    ghLogin: detectedGhUser,
+    gitUserName: detectedGitUser,
+    explicitGithubUser: opts['github-user'],
+  });
+  const author = opts.author || metadata.author || identity.projectName;
 
   const values = {
-    name,
-    packageName: name,
-    projectBase,
-    repoName,
-    nameCamel: camelCase(name),
-    nameSnake: snakeCase(name),
+    name: identity.packageName || identity.pythonDistribution,
+    ...identity,
+    projectBase: identity.projectName,
+    nameCamel: identity.jsIdentifier || identity.projectName,
+    nameSnake: identity.pythonImport || identity.projectName.replace(/[-._~]+/g, '_'),
     description: `A ${opts.lang} project, scaffolded with oss-init.`,
     year: String(new Date().getFullYear()),
     author,
-    githubUser,
+    githubUser: metadata.githubUser,
     license: opts.license,
     licenseId: opts.license === 'apache-2.0' ? 'Apache-2.0' : 'MIT',
     licenseTitle: opts.license === 'apache-2.0' ? 'Apache License 2.0' : 'MIT License',
@@ -295,12 +297,10 @@ export async function runInit(argv, { version }) {
     } else if (!didGitInit) {
       process.stderr.write('\n--github requested but git init/commit failed (check git user.name / user.email). Cannot push to GitHub.\n');
     } else {
-      const ghUser = gitConfig('user.name') || '';
-      const suggestedRepo = ghUser ? `${ghUser}/${name}` : name;
-      const r = spawnSync('gh', ['repo', 'create', name, '--public', '--source', '.', '--push'], {
+      const suggestedRepo = `${metadata.githubUser}/${identity.repoName}`;
+      const r = spawnSync('gh', ['repo', 'create', identity.repoName, '--public', '--source', '.', '--push'], {
         cwd: targetDir,
         stdio: 'inherit',
-        shell: true,
       });
       if (r.status === 0) {
         process.stdout.write(`\nCreated and pushed GitHub repository.\n`);
