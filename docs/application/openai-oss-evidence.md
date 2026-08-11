@@ -4,7 +4,7 @@ This file records evidence for a planned application around 2026-09-10. It separ
 
 ## Snapshot
 
-Evidence checked on 2026-08-12 at approximately 05:41 (Asia/Shanghai).
+Evidence checked on 2026-08-12 at approximately 05:55 (Asia/Shanghai).
 
 ### Public repository facts
 
@@ -41,6 +41,7 @@ Release workflow run [`31537685762`](https://github.com/kkx94/oss-init/actions/r
 | Public npm registry | Returned `@kkx94/oss-init@0.4.0`; package access status is `public` and `latest` resolves to `0.4.0` |
 | npm provenance | `dist.attestations` exposes an attestation URL with predicate type `https://slsa.dev/provenance/v1` |
 | Clean `npx` acceptance | `npx --yes --package @kkx94/oss-init@0.4.0 oss-init --version` returned `0.4.0` from a new temporary directory |
+| npm Trusted Publishing | npm account 2FA is `auth-and-writes`; the authenticated trust command completed for `kkx94/oss-init` and `release.yml`, and this revision removes `NPM_TOKEN` from the parent workflow |
 | `git diff --check` | Passed |
 
 The code now on `main` adds or verifies:
@@ -69,6 +70,7 @@ The code now on `main` adds or verifies:
 - Public repositories can preview the read-only audit through a documented GitHub Action; the README recommends full-SHA pinning until an action-bearing release is tagged.
 - Organizations can overlay and safely refresh their own templates without forking the built-in baseline or persisting local template paths.
 - The scoped package is installable from the public npm registry, and v0.4.0 carries npm provenance tied to the GitHub Actions source build.
+- The parent release workflow is configured for npm Trusted Publishing through GitHub OIDC and contains no repository npm token reference.
 
 ## Claims that are not yet supportable
 
@@ -77,6 +79,7 @@ The code now on `main` adds or verifies:
 - Do not treat the four forks as adoption evidence without verifying independent downstream use.
 - Do not describe the hygiene score as a security, quality, importance, or production-readiness certification.
 - Do not claim long-term maintenance history; the public repository was created on 2026-08-10.
+- Do not claim that a tokenless npm publish has completed until the next release exercises the new Trusted Publishing workflow end to end.
 
 ## Official program fit
 

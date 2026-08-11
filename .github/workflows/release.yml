@@ -20,17 +20,11 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - name: Verify tag and package identity
         run: node scripts/verify-release.js "$GITHUB_REF_NAME"
-      - name: Require npm publication credential
-        run: test -n "$NODE_AUTH_TOKEN"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm test
       - run: npm run lint
       - run: npm pack --dry-run --json
       - name: Publish public package with provenance
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Verify public registry and clean npx execution
         shell: bash
         env:

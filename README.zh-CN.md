@@ -213,7 +213,7 @@ node bin/oss-init.js check
 npm pack --dry-run --json
 ```
 
-主仓库 CI 在 Linux 上覆盖 Node.js 22、24 和 26，在 Windows 上覆盖 Node.js 24。发布流程会验证 tag 与 `package.json`、运行测试和包检查、通过 npm provenance 发布、等待公开 registry 可见，并在干净目录中验证 `npx`，最后才创建 GitHub Release。
+主仓库 CI 在 Linux 上覆盖 Node.js 22、24 和 26，在 Windows 上覆盖 Node.js 24。发布流程通过 GitHub OIDC Trusted Publishing 向 npm 认证（仓库不保存 npm token），验证 tag 与 `package.json`、运行测试和包检查、通过 npm provenance 发布、等待公开 registry 可见，并在干净目录中验证 `npx`，最后才创建 GitHub Release。
 
 ## 文档
 

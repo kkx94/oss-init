@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'verify-release.js');
+const RELEASE_WORKFLOW = join(dirname(fileURLToPath(import.meta.url)), '..', '.github', 'workflows', 'release.yml');
 
 function fixture(pkg) {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-release-'));
@@ -56,4 +57,11 @@ test('rejects a missing tag argument', () => {
   const result = run([]);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Usage:/);
+});
+
+test('parent releases use GitHub OIDC trusted publishing without an npm token', () => {
+  const workflow = readFileSync(RELEASE_WORKFLOW, 'utf8');
+  assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /npm publish --access public --provenance/);
+  assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN|Require npm publication credential/);
 });
