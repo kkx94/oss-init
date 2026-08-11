@@ -384,7 +384,7 @@ test('update writes a .oss-init.json manifest on init', () => {
     runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
     assert.ok(existsSync(join(dir, '.oss-init.json')), 'manifest should exist');
     const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'));
-    assert.equal(manifest.schemaVersion, 1);
+    assert.equal(manifest.schemaVersion, 2);
     assert.equal(manifest.generatorVersion, PACKAGE_VERSION);
     assert.equal(manifest.values.name, 'demo-app');
     assert.equal(manifest.options.lang, 'node');
@@ -573,11 +573,12 @@ test('update rewrites the manifest with the installed generator version', () => 
     runCli([dir, '--name', 'demo-app', '--docs', 'en']);
     const manifestPath = join(dir, '.oss-init.json');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.schemaVersion = 1;
     manifest.generatorVersion = '0.2.0';
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
     runCli(['update', dir]);
     const rewritten = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    assert.equal(rewritten.schemaVersion, 1);
+    assert.equal(rewritten.schemaVersion, 2);
     assert.equal(rewritten.generatorVersion, PACKAGE_VERSION);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -612,5 +613,148 @@ test('--dry-run does not write the manifest', () => {
     assert.equal(existsSync(join(dir, '.oss-init.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('--template snapshots portable overrides and update reuses them safely', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-'));
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-target-'));
+  try {
+    mkdirSync(join(customRoot, 'common'), { recursive: true });
+    mkdirSync(join(customRoot, 'node'), { recursive: true });
+    writeFileSync(join(customRoot, 'common', 'README.md.tpl'), '# {{projectName}}\n\nOrganization baseline.\n');
+    writeFileSync(join(customRoot, 'node', 'NOTICE.md.tpl'), 'Owner: {{author}}\n');
+
+    runCli([
+      dir,
+      '--name',
+      'demo-app',
+      '--docs',
+      'en',
+      '--author',
+      'Example Org',
+      '--template',
+      customRoot,
+    ]);
+    assert.equal(readFileSync(join(dir, 'README.md'), 'utf8'), '# demo-app\n\nOrganization baseline.\n');
+    assert.equal(readFileSync(join(dir, 'NOTICE.md'), 'utf8'), 'Owner: Example Org\n');
+
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifestText = readFileSync(manifestPath, 'utf8');
+    const manifest = JSON.parse(manifestText);
+    assert.equal(manifest.schemaVersion, 2);
+    assert.equal(manifest.customTemplates['node/NOTICE.md.tpl'], 'Owner: {{author}}\n');
+    assert.equal(manifestText.includes(customRoot), false, 'manifest must not store the machine-specific template path');
+
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(join(dir, 'NOTICE.md'));
+    const added = runCli(['update', dir]);
+    assert.match(added, /Added 1 new file/);
+    assert.equal(readFileSync(join(dir, 'NOTICE.md'), 'utf8'), 'Owner: Example Org\n');
+
+    writeFileSync(join(dir, 'NOTICE.md'), 'User-owned notice\n');
+    const skipped = runCli(['update', dir]);
+    assert.match(skipped, /Skipped.*modified/);
+    assert.equal(readFileSync(join(dir, 'NOTICE.md'), 'utf8'), 'User-owned notice\n');
+    runCli(['update', dir, '--force']);
+    assert.equal(readFileSync(join(dir, 'NOTICE.md'), 'utf8'), 'Owner: Example Org\n');
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('--template reports missing values before writing project files', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-invalid-'));
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-invalid-target-'));
+  try {
+    mkdirSync(join(customRoot, 'common'), { recursive: true });
+    writeFileSync(join(customRoot, 'common', 'NOTICE.md.tpl'), 'Team: {{organization}}\n');
+    assert.throws(
+      () => runCli([dir, '--name', 'demo-app', '--docs', 'en', '--template', customRoot]),
+      (error) => {
+        assert.match(error.stderr, /organization/);
+        assert.match(error.stderr, /common\/NOTICE\.md\.tpl/);
+        return true;
+      },
+    );
+    assert.deepEqual(readdirSync(dir), []);
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('--template rejects placeholder-derived path escape without writing outside the target', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-escape-'));
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-escape-target-'));
+  const escaped = join(dirname(dir), 'oss-init-custom-escaped.txt');
+  try {
+    mkdirSync(join(customRoot, 'node'), { recursive: true });
+    writeFileSync(join(customRoot, 'node', '{{author}}.tpl'), 'outside\n');
+    assert.throws(
+      () => runCli([
+        dir,
+        '--name',
+        'demo-app',
+        '--docs',
+        'en',
+        '--author',
+        '../../oss-init-custom-escaped.txt',
+        '--template',
+        customRoot,
+      ]),
+      (error) => {
+        assert.match(error.stderr, /safe relative path|outside target directory/);
+        return true;
+      },
+    );
+    assert.equal(existsSync(escaped), false);
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(escaped, { force: true });
+  }
+});
+
+test('--template supports a non-ASCII Python template directory and dry-run stays read-only', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), '组织模板-'));
+  const previewDir = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-preview-'));
+  const targetDir = mkdtempSync(join(tmpdir(), 'oss-init-cli-custom-python-'));
+  try {
+    mkdirSync(join(customRoot, 'python'), { recursive: true });
+    writeFileSync(join(customRoot, 'python', 'ORGANIZATION.md.tpl'), 'Import {{pythonImport}}\n');
+    const preview = runCli([
+      previewDir,
+      '--name',
+      'demo-pkg',
+      '--lang',
+      'python',
+      '--docs',
+      'en',
+      '--template',
+      customRoot,
+      '--dry-run',
+    ]);
+    assert.match(preview, /ORGANIZATION\.md/);
+    assert.deepEqual(readdirSync(previewDir), []);
+
+    runCli([
+      targetDir,
+      '--name',
+      'demo-pkg',
+      '--lang',
+      'python',
+      '--docs',
+      'en',
+      '--template',
+      customRoot,
+    ]);
+    assert.equal(readFileSync(join(targetDir, 'ORGANIZATION.md'), 'utf8'), 'Import demo_pkg\n');
+    assert.ok(existsSync(join(targetDir, 'pyproject.toml')));
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(previewDir, { recursive: true, force: true });
+    rmSync(targetDir, { recursive: true, force: true });
   }
 });

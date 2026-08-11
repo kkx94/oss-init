@@ -85,6 +85,7 @@ oss-init my-project --lang node --ci  # non-interactive
 | `--name` | string | directory name | Project/package name; npm scopes are supported for Node.js |
 | `--author` | string | `git user.name` | Author used in the LICENSE and initial commit |
 | `--github-user` | string | detected `gh` login | GitHub login used in generated repository links |
+| `--template` | directory | none | Overlay built-ins with organization templates from `common/` and `<lang>/` |
 | `--ci` | flag | off | Generate `.github/workflows/ci.yml` |
 | `--publish` | flag | off | Generate `.github/workflows/release.yml` |
 | `--git` | flag | off | Initialize Git and create the first commit |
@@ -111,9 +112,30 @@ When the target directory is non-empty, `oss-init` reports which paths conflict 
 
 Generated Node.js CI tests Node.js 22 and 24 on Linux and Node.js 24 on Windows. Generated Python CI tests Python 3.10 through 3.13 on Linux and Python 3.13 on Windows. Both expose a stable aggregate check named `CI` for branch protection.
 
+### Overlay organization templates
+
+Use `--template <dir>` to keep the built-in baseline while replacing individual files or adding organization-specific files. The custom directory mirrors the built-in `common/`, `node/`, and `python/` layout:
+
+```text
+company-templates/
+├── common/
+│   ├── README.md.tpl
+│   └── NOTICE.md.tpl
+└── node/
+    └── docs/architecture.md.tpl
+```
+
+```bash
+oss-init my-service --lang node --template ./company-templates
+```
+
+Files under `common/` apply to either language and files under the selected language directory apply afterward. A matching relative path overrides the built-in template; a new path adds a generated file. Template filenames and UTF-8 text can use the same `{{projectName}}`, `{{author}}`, and other built-in values. Unknown values fail before any project file is written.
+
+For portable updates, `init` stores the selected custom template text in `.oss-init.json`, not the machine-specific source directory. `update` can therefore reproduce the same files after that directory moves or disappears, while the normal manifest hashes still protect user edits. Symbolic links, escaping paths, reserved `.git/` and `.oss-init.json` targets, more than 200 files, individual files over 256 KiB, and snapshots over 2 MiB are rejected.
+
 ### Refresh a scaffolded repository
 
-`init` writes a `.oss-init.json` manifest with schema version 1, normalized project identity, render options, and SHA-256 hashes. Manifests written by v0.2.x and v0.3.0 are migrated when read.
+`init` writes a `.oss-init.json` manifest with schema version 2, normalized project identity, render options, SHA-256 hashes, and an optional portable custom-template snapshot. Schema v1 manifests remain supported, and manifests written by v0.2.x and v0.3.0 are migrated when read.
 
 ```bash
 oss-init update                # update generated files that remain unchanged
@@ -213,14 +235,13 @@ The parent repository tests Node.js 22, 24, and 26 on Linux and Node.js 24 on Wi
 
 - Already using oss-init in a public repository? [Submit an adoption report](https://github.com/kkx94/oss-init/issues/new?template=adoption.yml). Reports are verified before a project is listed; no adoption is inferred from stars or downloads.
 - Found a bug or have a concrete workflow request? [Open an issue](https://github.com/kkx94/oss-init/issues/new/choose).
-- Looking for a first contribution? Custom template directory support is scoped in [#3](https://github.com/kkx94/oss-init/issues/3) and marked `good first issue` / `help wanted`.
 
 ## Roadmap
 
 - [x] Python templates
 - [x] Safe generated-file refresh with manifest migration
 - [x] Cross-platform generated CI
-- [ ] Custom template directories ([#3](https://github.com/kkx94/oss-init/issues/3))
+- [x] Custom template directories ([#3](https://github.com/kkx94/oss-init/issues/3))
 - [ ] Configurable rule sets for `check`
 - [ ] Additional language templates driven by user demand
 

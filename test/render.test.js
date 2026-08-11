@@ -1,11 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  readdirSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { render } from '../src/render.js';
+import { loadCustomTemplateSnapshot, render } from '../src/render.js';
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'templates');
 
@@ -377,5 +386,155 @@ test('render refuses a placeholder-derived destination outside the target direct
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(escaped, { recursive: true, force: true });
+  }
+});
+
+test('custom common and language templates override built-ins and add files', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), 'oss-init-custom-'));
+  const target = mkdtempSync(join(tmpdir(), 'oss-init-render-custom-'));
+  try {
+    mkdirSync(join(customRoot, 'common'), { recursive: true });
+    mkdirSync(join(customRoot, 'node', 'docs'), { recursive: true });
+    writeFileSync(join(customRoot, 'common', 'README.md.tpl'), '# {{projectName}}\n\nOrganization README.\n');
+    writeFileSync(join(customRoot, 'common', '.gitignore.tpl'), 'organization-cache/\n');
+    writeFileSync(join(customRoot, 'common', 'NOTICE.md.tpl'), 'Copyright {{year}} {{author}}\n');
+    writeFileSync(join(customRoot, 'node', 'docs', 'runtime.md.tpl'), 'Runtime: {{runtimeSummary}}\n');
+
+    const customTemplates = loadCustomTemplateSnapshot(customRoot, 'node');
+    const result = render({
+      templateRoot: TEMPLATE_ROOT,
+      customTemplates,
+      targetDir: target,
+      values: BASE_VALUES,
+      docs: 'en',
+      ci: false,
+      publish: false,
+      lang: 'node',
+    });
+
+    assert.deepEqual(result.errors, []);
+    assert.equal(readFileSync(join(target, 'README.md'), 'utf8'), '# demo-app\n\nOrganization README.\n');
+    assert.equal(readFileSync(join(target, 'NOTICE.md'), 'utf8'), 'Copyright 2026 Demo Author\n');
+    assert.equal(readFileSync(join(target, 'docs', 'runtime.md'), 'utf8'), 'Runtime: Node.js >= 22 (ES modules)\n');
+    assert.equal(readFileSync(join(target, '.gitignore'), 'utf8'), 'organization-cache/\n');
+    assert.ok(existsSync(join(target, 'package.json')), 'built-in templates remain the base');
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test('custom Python templates use the selected language section', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), '自定义模板-'));
+  const target = mkdtempSync(join(tmpdir(), 'oss-init-render-python-custom-'));
+  try {
+    mkdirSync(join(customRoot, 'python'), { recursive: true });
+    writeFileSync(join(customRoot, 'python', 'ORGANIZATION.md.tpl'), 'Package {{pythonImport}}\n');
+    const customTemplates = loadCustomTemplateSnapshot(customRoot, 'python');
+    const result = render({
+      templateRoot: TEMPLATE_ROOT,
+      customTemplates,
+      targetDir: target,
+      values: {
+        ...BASE_VALUES,
+        name: 'demo-pkg',
+        packageName: null,
+        projectName: 'demo-pkg',
+        projectBase: 'demo-pkg',
+        repoName: 'demo-pkg',
+        jsIdentifier: null,
+        pythonDistribution: 'demo-pkg',
+        pythonImport: 'demo_pkg',
+        nameSnake: 'demo_pkg',
+      },
+      docs: 'en',
+      ci: false,
+      publish: false,
+      lang: 'python',
+    });
+    assert.deepEqual(result.errors, []);
+    assert.equal(readFileSync(join(target, 'ORGANIZATION.md'), 'utf8'), 'Package demo_pkg\n');
+    assert.ok(existsSync(join(target, 'pyproject.toml')));
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test('custom template errors are reported before any output is written', () => {
+  const target = mkdtempSync(join(tmpdir(), 'oss-init-render-invalid-custom-'));
+  try {
+    const result = render({
+      templateRoot: TEMPLATE_ROOT,
+      customTemplates: { 'common/NOTICE.md.tpl': '{{organization}}\n' },
+      targetDir: target,
+      values: BASE_VALUES,
+      docs: 'en',
+      ci: false,
+      publish: false,
+      lang: 'node',
+    });
+    assert.match(result.errors.join('\n'), /organization.*common\/NOTICE\.md\.tpl/);
+    assert.deepEqual(readdirSync(target), []);
+  } finally {
+    rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test('custom template targets cannot escape or overwrite reserved metadata', () => {
+  const target = mkdtempSync(join(tmpdir(), 'oss-init-render-custom-safe-'));
+  const escaped = join(dirname(target), 'outside.txt');
+  try {
+    assert.throws(
+      () => render({
+        templateRoot: TEMPLATE_ROOT,
+        customTemplates: { 'node/{{author}}.tpl': 'outside\n' },
+        targetDir: target,
+        values: { ...BASE_VALUES, author: '../../outside.txt' },
+        docs: 'en',
+        ci: false,
+        publish: false,
+        lang: 'node',
+      }),
+      /safe relative path|outside target directory/,
+    );
+    const reserved = render({
+      templateRoot: TEMPLATE_ROOT,
+      customTemplates: { 'node/.oss-init.json.tpl': '{}\n' },
+      targetDir: target,
+      values: BASE_VALUES,
+      docs: 'en',
+      ci: false,
+      publish: false,
+      lang: 'node',
+    });
+    assert.match(reserved.errors.join('\n'), /reserved path \.oss-init\.json/);
+    assert.equal(existsSync(escaped), false);
+    assert.equal(existsSync(join(target, '.oss-init.json')), false);
+  } finally {
+    rmSync(target, { recursive: true, force: true });
+    rmSync(escaped, { force: true });
+  }
+});
+
+test('custom template loading rejects invalid UTF-8 and symbolic links', () => {
+  const customRoot = mkdtempSync(join(tmpdir(), 'oss-init-custom-source-safe-'));
+  const outside = mkdtempSync(join(tmpdir(), 'oss-init-custom-source-outside-'));
+  try {
+    mkdirSync(join(customRoot, 'common'), { recursive: true });
+    const invalid = join(customRoot, 'common', 'invalid.tpl');
+    writeFileSync(invalid, Buffer.from([0xff]));
+    assert.throws(() => loadCustomTemplateSnapshot(customRoot, 'node'), /valid UTF-8/);
+
+    rmSync(invalid);
+    symlinkSync(
+      outside,
+      join(customRoot, 'common', 'linked'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
+    assert.throws(() => loadCustomTemplateSnapshot(customRoot, 'node'), /symbolic links are not allowed/);
+  } finally {
+    rmSync(customRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });

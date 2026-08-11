@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -134,26 +134,62 @@ test('rejects unsafe relative paths and path-derived identity values', () => {
   assert.match(unsafeIdentity.errors.join('\n'), /values\.pythonImport/);
 });
 
-test('uses the supplied installed generator version when constructing a manifest', () => {
+test('uses schema 2 and the supplied installed generator version when constructing a manifest', () => {
   const manifest = createManifest({
     generatorVersion: '0.3.1',
     values: VALUES,
     options: OPTIONS,
     files: { 'README.md': HASH },
   });
-  assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.schemaVersion, 2);
   assert.equal(manifest.generatorVersion, '0.3.1');
   assert.equal('version' in manifest, false);
 });
 
+test('schema 2 validates and preserves portable custom template snapshots', () => {
+  const customTemplates = {
+    'common/NOTICE.md.tpl': 'Copyright {{year}} {{author}}\n',
+    'node/docs/runtime.md.tpl': '# {{projectName}} runtime\n',
+  };
+  const manifest = createManifest({
+    generatorVersion: '0.3.1',
+    values: VALUES,
+    options: OPTIONS,
+    files: { 'README.md': HASH },
+    customTemplates,
+  });
+  assert.deepEqual(manifest.customTemplates, customTemplates);
+  assert.doesNotMatch(JSON.stringify(manifest), /[A-Z]:\\|\/Users\//);
+});
+
+test('rejects unsafe or non-text custom template snapshots', () => {
+  for (const customTemplates of [
+    { '../escape.tpl': 'x' },
+    { 'other/file.tpl': 'x' },
+    { 'common/file.tpl': 123 },
+    {},
+  ]) {
+    const result = parseAndValidateManifest(validManifest({
+      schemaVersion: 2,
+      customTemplates,
+    }));
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join('\n'), /customTemplates/);
+  }
+});
+
 test('resolveContainedPath accepts descendants and rejects cross-platform escapes', () => {
   const root = mkdtempSync(join(tmpdir(), 'oss-init-contained-'));
+  const outside = mkdtempSync(join(tmpdir(), 'oss-init-contained-outside-'));
   try {
     assert.equal(resolveContainedPath(root, 'src/index.js'), join(root, 'src', 'index.js'));
     for (const rel of ['../escape', '/absolute', '\\server\\share', 'C:\\escape.txt', 'src/../../escape']) {
       assert.throws(() => resolveContainedPath(root, rel), /safe relative path|outside target directory/);
     }
+    symlinkSync(outside, join(root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+    assert.throws(() => resolveContainedPath(root, 'linked/file.txt'), /symbolic link/);
   } finally {
     rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });

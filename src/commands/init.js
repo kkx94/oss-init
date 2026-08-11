@@ -9,7 +9,7 @@ import { createManifest, resolveContainedPath, sha256, writeManifestAtomic } fro
 import { deriveProjectIdentity, deriveTemplateValues, resolveGithubMetadata } from '../project-identity.js';
 import { defaultNameFor, dirExists, dirIsEmpty, isWritable, validateName } from '../validate.js';
 import { promptForConflictOverwrite, promptForOptions } from '../prompts.js';
-import { render } from '../render.js';
+import { loadCustomTemplateSnapshot, render } from '../render.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_ROOT = join(__dirname, '..', 'templates');
@@ -30,6 +30,7 @@ export function initHelpText() {
     '  --name <name>              Package/project name (default: directory name)',
     '  --author <name>            License/commit author',
     '  --github-user <login>      GitHub login for generated repository links',
+    '  --template <dir>           Overlay built-in templates with common/ and <lang>/ files',
     '  --ci                       Generate .github/workflows/ci.yml',
     '  --publish                  Generate .github/workflows/release.yml',
     '  --git                      Initialize a git repo and make the first commit',
@@ -42,6 +43,7 @@ export function initHelpText() {
     '',
     'Examples:',
     '  oss-init init my-app --lang node --ci --git',
+    '  oss-init init my-app --template ./company-templates',
     '  oss-init init my-lib --docs bilingual --ci --publish --github',
   ].join('\n');
 }
@@ -120,7 +122,7 @@ function gitInitAndCommit(targetDir) {
 
 export { sha256 };
 
-export function writeManifest(targetDir, filesWritten, values, opts, generatorVersion) {
+export function writeManifest(targetDir, filesWritten, values, opts, generatorVersion, customTemplates) {
   const files = {};
   for (const rel of filesWritten) {
     try {
@@ -142,6 +144,7 @@ export function writeManifest(targetDir, filesWritten, values, opts, generatorVe
       agents: opts.agents,
     },
     files,
+    customTemplates,
   });
   writeManifestAtomic(targetDir, manifest);
 }
@@ -182,6 +185,7 @@ export async function runInit(argv, { version }) {
     opts.github = finalOptions.github;
     opts.agents = finalOptions.agents;
     opts['dry-run'] = finalOptions['dry-run'];
+    opts.template = finalOptions.template;
   }
 
   const name = opts.name || defaultName;
@@ -191,6 +195,16 @@ export async function runInit(argv, { version }) {
   } catch (error) {
     process.stderr.write(`${error.message}\n`);
     return 1;
+  }
+
+  let customTemplates;
+  if (opts.template) {
+    try {
+      customTemplates = loadCustomTemplateSnapshot(opts.template, opts.lang);
+    } catch (error) {
+      process.stderr.write(`Invalid custom template directory: ${error.message}\n`);
+      return 1;
+    }
   }
 
   if (dirExists(targetDir) && !dirIsEmpty(targetDir) && !opts.force) {
@@ -257,6 +271,7 @@ export async function runInit(argv, { version }) {
 
   const result = render({
     templateRoot: TEMPLATE_ROOT,
+    customTemplates,
     targetDir,
     values,
     docs: opts.docs,
@@ -287,7 +302,7 @@ export async function runInit(argv, { version }) {
     return 0;
   }
 
-  writeManifest(targetDir, result.filesWritten, values, opts, version);
+  writeManifest(targetDir, result.filesWritten, values, opts, version, customTemplates);
 
   const didGitInit = (opts.git || opts.github) && whichGit()
     ? gitInitAndCommit(targetDir)

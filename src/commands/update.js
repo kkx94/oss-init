@@ -144,6 +144,7 @@ export function runUpdate(argv, { version }) {
   try {
     const rendered = render({
       templateRoot: TEMPLATE_ROOT,
+      customTemplates: manifest.customTemplates,
       targetDir: tmpDir,
       values: manifest.values,
       docs: templateOptions.docs,
@@ -216,6 +217,7 @@ export function runUpdate(argv, { version }) {
       values: manifest.values,
       options: templateOptions,
       files: generatedHashes,
+      customTemplates: manifest.customTemplates,
     });
 
     if (!commandOptions['dry-run']) {

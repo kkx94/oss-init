@@ -5,6 +5,7 @@ const INIT_FLAGS = [
   { name: 'name', type: 'value', values: null },
   { name: 'author', type: 'value', values: null },
   { name: 'github-user', type: 'value', values: null },
+  { name: 'template', type: 'value', values: null },
   { name: 'ci', type: 'boolean', default: false },
   { name: 'publish', type: 'boolean', default: false },
   { name: 'git', type: 'boolean', default: false },
