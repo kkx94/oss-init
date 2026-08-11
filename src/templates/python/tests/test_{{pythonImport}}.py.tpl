@@ -1,8 +1,8 @@
-"""Tests for {{nameSnake}}."""
+"""Tests for {{pythonImport}}."""
 
 import unittest
 
-from {{nameSnake}} import add, multiply
+from {{pythonImport}} import add, multiply
 
 
 class TestMath(unittest.TestCase):

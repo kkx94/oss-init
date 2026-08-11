@@ -1,54 +1,46 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Codex, OpenCode, Cursor, Copilot, etc.) working on **{{name}}**.
-
-> This file is a convention growing in the open source ecosystem. It tells autonomous agents how to behave in this repository. Maintainers: edit it as your project evolves.
+Guidance for coding agents working on **{{projectName}}**.
 
 ## Project overview
 
-{{name}} — {{description}}.
+{{description}}
 
-## Languages and runtime
+## Language and runtime
 
-- Primary language: JavaScript (ES Modules)
-- Runtime: Node.js >= 18
-- No build step
+- Primary language: {{primaryLanguage}}
+- Runtime: {{runtimeSummary}}
+- No runtime dependencies in the generated starter
 
 ## Conventions
 
-- **No runtime dependencies.** Adding a dependency requires justification — keep the supply chain surface minimal.
-- ESM (`import` / `export`), no CommonJS (`require`).
-- 2-space indentation, no trailing semicolons.
-- Small, focused functions; descriptive names.
-- Do not add comments unless requested or the code is genuinely non-obvious.
+- Follow the existing module layout and local style.
+- Keep functions small, focused, and clearly named.
+- Do not add runtime dependencies without explaining the need and supply-chain impact.
+- Do not reformat unrelated files or add speculative features.
+- Never commit credentials, local machine configuration, or generated archives.
 
-## How to run tests
+## Verification
+
+Run the project test command before submitting a change:
 
 ```bash
-npm test        # node --test test/
-npm run lint    # node --check on every source file
+{{testCommand}}
 ```
 
-All tests must pass before submitting a change. Prefer adding tests alongside new features.
+Add or update tests for behavior changes. A command exiting successfully is not enough if it does not exercise the changed behavior.
 
-## How to make changes
+## Change workflow
 
-1. Fork, branch from `main`, keep commits focused.
-2. Update tests for any behavior change.
-3. Ensure `npm test` and `npm run lint` are green.
-4. Follow the existing commit message style: present tense, imperative mood.
-
-## What not to do
-
-- Do not add new runtime dependencies without discussion.
-- Do not reformat code that is unrelated to the change at hand.
-- Do not commit secrets, tokens, or personal data.
-- Do not delete CHANGELOG entries.
+1. Branch from `main` and keep commits focused.
+2. Preserve user-authored files and existing changelog history.
+3. Update documentation when public behavior changes.
+4. Verify the full test suite before opening a pull request.
 
 ## Maintainer
 
-Sole core maintainer: {{githubUser}} (write access).
+Core maintainer: {{githubUser}}.
 
 ## License
 
-By contributing you agree your contributions are licensed under the project's {{licenseTitle}} — see [LICENSE](LICENSE).
+Contributions are licensed under the project's {{licenseTitle}}. See [LICENSE](LICENSE).

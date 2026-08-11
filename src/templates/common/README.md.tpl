@@ -1,49 +1,45 @@
-# {{name}}
+# {{projectName}}
 
 {{description}}
 
-![License](https://img.shields.io/github/license/{{githubUser}}/{{name}})
-![Node CI](https://img.shields.io/github/actions/workflow/status/{{githubUser}}/{{name}}/ci.yml?branch=main&label=ci)
-![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
+![License](https://img.shields.io/github/license/{{githubUser}}/{{repoName}})
+{{ciBadge}}
 
-> Scaffolded with [oss-init](https://github.com/oss-init/oss-init) — scaffold a production-grade open source repository in one command, with zero dependencies.
+> Scaffolded with [oss-init]({{generatorRepoUrl}}), a zero-runtime-dependency tool for creating and safely refreshing open-source repository foundations.
 
-## Features
+## Included foundations
 
-- Built with modern Node.js (ESM, Node >= 18)
-- Zero runtime dependencies
-- Built-in test runner (`node --test`)
-- CI-ready: GitHub Actions workflow included
-- Actively maintained
+- Runtime: {{runtimeSummary}}
+- Zero runtime dependencies in the starter project
+- Built-in tests
+- {{ciSummary}}
+- Contribution, security, issue, and pull-request guidance
 
 ## Installation
 
 ```bash
-npm install
+{{installCommand}}
 ```
 
 ## Usage
 
-```js
-import { {{nameCamel}} } from './src/index.js';
-
-const result = {{nameCamel}}(1, 2);
-console.log(result); // 3
+```{{codeFenceLanguage}}
+{{usageExample}}
 ```
 
 ## Testing
 
 ```bash
-npm test
+{{testCommand}}
 ```
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started, our code of conduct, and the process for submitting pull requests.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before opening a pull request.
 
 ## Security
 
-Found a vulnerability? Please report it responsibly. See [SECURITY.md](SECURITY.md) for details.
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

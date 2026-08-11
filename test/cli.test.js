@@ -78,6 +78,20 @@ test('python template path placeholders are fully replaced', () => {
   }
 });
 
+test('generated Python project passes its own native tests', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-native-'));
+  try {
+    runCli([dir, '--name', 'demo-pkg', '--lang', 'python', '--docs', 'en']);
+    execFileSync('python', ['-m', 'unittest', 'discover', '-s', 'tests'], {
+      cwd: dir,
+      encoding: 'utf8',
+      env: { ...cleanEnv(), PYTHONPATH: join(dir, 'src') },
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('invalid package name exits non-zero', () => {
   assert.throws(
     () => runCli(['--name', 'Not Valid']),
@@ -326,7 +340,8 @@ test('check --fix generates missing community files', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-check-fix-'));
   try {
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'empty-repo' }) + '\n');
-    writeFileSync(join(dir, 'README.md'), '# empty-repo\n\nA bare repo. A bare repo. A bare repo.\n');
+    const existingReadme = '# empty-repo\n\nA bare repo. A bare repo. A bare repo.\n';
+    writeFileSync(join(dir, 'README.md'), existingReadme);
     assert.equal(existsSync(join(dir, 'LICENSE')), false);
     try {
       runCli(['check', dir, '--fix']);
@@ -337,6 +352,7 @@ test('check --fix generates missing community files', () => {
     }
     assert.ok(existsSync(join(dir, 'LICENSE')), 'fix should generate LICENSE');
     assert.ok(existsSync(join(dir, 'CONTRIBUTING.md')));
+    assert.equal(readFileSync(join(dir, 'README.md'), 'utf8'), existingReadme);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

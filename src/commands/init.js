@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseArgs, INIT_FLAG_DEFS } from '../args.js';
 import { createManifest, resolveContainedPath, sha256, writeManifestAtomic } from '../manifest.js';
-import { deriveProjectIdentity, resolveGithubMetadata } from '../project-identity.js';
+import { deriveProjectIdentity, deriveTemplateValues, resolveGithubMetadata } from '../project-identity.js';
 import { defaultNameFor, dirExists, dirIsEmpty, isWritable, validateName } from '../validate.js';
 import { promptForConflictOverwrite, promptForOptions } from '../prompts.js';
 import { render } from '../render.js';
@@ -234,6 +234,10 @@ export async function runInit(argv, { version }) {
     explicitGithubUser: opts['github-user'],
   });
   const author = opts.author || metadata.author || identity.projectName;
+  const templateValues = deriveTemplateValues(identity, opts.lang, {
+    ci: opts.ci,
+    githubUser: metadata.githubUser,
+  });
 
   const values = {
     name: identity.packageName || identity.pythonDistribution,
@@ -245,6 +249,7 @@ export async function runInit(argv, { version }) {
     year: String(new Date().getFullYear()),
     author,
     githubUser: metadata.githubUser,
+    ...templateValues,
     license: opts.license,
     licenseId: opts.license === 'apache-2.0' ? 'Apache-2.0' : 'MIT',
     licenseTitle: opts.license === 'apache-2.0' ? 'Apache License 2.0' : 'MIT License',

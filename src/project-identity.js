@@ -87,6 +87,8 @@ const PYTHON_RESERVED = new Set([
   'yield',
 ]);
 
+export const GENERATOR_REPO_URL = 'https://github.com/kkx94/oss-init';
+
 function projectBaseName(name) {
   return name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name;
 }
@@ -161,4 +163,36 @@ export function resolveGithubMetadata({
   const githubUser = explicitGithubUser.trim() || ghLogin.trim() || 'your-username';
   const author = gitUserName.trim() || explicitGithubUser.trim() || ghLogin.trim() || 'your-name';
   return { githubUser, author };
+}
+
+export function deriveTemplateValues(identity, lang, { ci = false, githubUser = 'your-username' } = {}) {
+  const repositoryUrl = `https://github.com/${githubUser}/${identity.repoName}`;
+  const shared = {
+    generatorRepoUrl: GENERATOR_REPO_URL,
+    ciBadge: ci ? `![CI](${repositoryUrl}/actions/workflows/ci.yml/badge.svg)` : '',
+    ciSummary: ci ? 'GitHub Actions CI included' : 'CI workflow not generated',
+  };
+  if (lang === 'node') {
+    return {
+      ...shared,
+      primaryLanguage: 'JavaScript',
+      runtimeSummary: 'Node.js >= 22 (ES modules)',
+      installCommand: 'npm install',
+      testCommand: 'npm test',
+      codeFenceLanguage: 'js',
+      usageExample: "import { add } from './src/index.js';\n\nconsole.log(add(1, 2));",
+    };
+  }
+  if (lang === 'python') {
+    return {
+      ...shared,
+      primaryLanguage: 'Python',
+      runtimeSummary: 'Python >= 3.10',
+      installCommand: 'python -m pip install -e ".[dev]"',
+      testCommand: 'python -m unittest discover -s tests',
+      codeFenceLanguage: 'python',
+      usageExample: `from ${identity.pythonImport} import add\n\nprint(add(1, 2))`,
+    };
+  }
+  throw new Error(`Unsupported project language: ${lang}`);
 }

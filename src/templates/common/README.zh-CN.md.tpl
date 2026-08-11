@@ -1,49 +1,45 @@
-# {{name}}
+# {{projectName}}
 
 {{description}}
 
-![License](https://img.shields.io/github/license/{{githubUser}}/{{name}})
-![Node CI](https://img.shields.io/github/actions/workflow/status/{{githubUser}}/{{name}}/ci.yml?branch=main&label=ci)
-![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
+![许可证](https://img.shields.io/github/license/{{githubUser}}/{{repoName}})
+{{ciBadge}}
 
-> 由 [oss-init](https://github.com/oss-init/oss-init) 脚手架生成 — 一行命令搭建生产级开源仓库，零依赖。
+> 本项目由 [oss-init]({{generatorRepoUrl}}) 生成。oss-init 是一个零运行时依赖的工具，用于创建并安全刷新开源仓库的基础文件。
 
-## 特性
+## 已包含的基础能力
 
-- 现代 Node.js（ESM，Node >= 18）
-- 零运行时依赖
-- 内置测试运行器（`node --test`）
-- 开箱即用的 GitHub Actions CI
-- 持续维护中
+- 运行环境：{{runtimeSummary}}
+- 初始项目零运行时依赖
+- 内置测试
+- {{ciSummary}}
+- 贡献、安全、Issue 与 Pull Request 指南
 
 ## 安装
 
 ```bash
-npm install
+{{installCommand}}
 ```
 
 ## 使用
 
-```js
-import { {{nameCamel}} } from './src/index.js';
-
-const result = {{nameCamel}}(1, 2);
-console.log(result); // 3
+```{{codeFenceLanguage}}
+{{usageExample}}
 ```
 
 ## 测试
 
 ```bash
-npm test
+{{testCommand}}
 ```
 
 ## 参与贡献
 
-欢迎贡献！请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解贡献流程、行为准则及提交 Pull Request 的规范。
+欢迎贡献。提交 Pull Request 前，请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和[行为准则](CODE_OF_CONDUCT.md)。
 
 ## 安全
 
-发现漏洞？请负责任地报告。详见 [SECURITY.md](SECURITY.md)。
+请按照 [SECURITY.md](SECURITY.md) 的说明私下报告安全漏洞。
 
 ## 许可证
 

@@ -6,17 +6,41 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
       - run: npm test
+      - run: npm run lint
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - run: npm test
+      - run: npm run lint
+
+  CI:
+    name: CI
+    runs-on: ubuntu-latest
+    needs: [test, windows]
+    if: always()
+    steps:
+      - name: Require every test job
+        if: ${{ needs.test.result != 'success' || needs.windows.result != 'success' }}
+        run: exit 1
+      - run: echo "All required test jobs passed."

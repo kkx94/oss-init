@@ -31,6 +31,15 @@ const VALUES = {
   license: 'mit',
   licenseId: 'MIT',
   licenseTitle: 'MIT License',
+  generatorRepoUrl: 'https://github.com/kkx94/oss-init',
+  primaryLanguage: 'JavaScript',
+  runtimeSummary: 'Node.js >= 22 (ES modules)',
+  installCommand: 'npm install',
+  testCommand: 'npm test',
+  codeFenceLanguage: 'js',
+  usageExample: "import { add } from './src/index.js';\n\nconsole.log(add(1, 2));",
+  ciBadge: '![CI](https://github.com/demo-user/demo-app/actions/workflows/ci.yml/badge.svg)',
+  ciSummary: 'GitHub Actions CI included',
 };
 
 const OPTIONS = {

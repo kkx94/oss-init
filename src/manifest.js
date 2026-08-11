@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve, win32 } from 'node:path';
 
-import { deriveProjectIdentity } from './project-identity.js';
+import { deriveProjectIdentity, deriveTemplateValues } from './project-identity.js';
 
 export const MANIFEST_SCHEMA_VERSION = 1;
 
@@ -65,6 +65,10 @@ function normalizeLegacy(manifest) {
         projectBase: identity.projectName,
         nameCamel: identity.jsIdentifier || identity.projectName,
         nameSnake: identity.pythonImport || identity.projectName.replace(/[-._~]+/g, '_'),
+        ...deriveTemplateValues(identity, options.lang, {
+          ci: options.ci,
+          githubUser: oldValues.githubUser || 'your-username',
+        }),
       };
     }
   }
@@ -95,11 +99,31 @@ function validateValues(values, options, errors) {
     errors.push('values must be an object.');
     return;
   }
-  for (const key of ['name', 'projectName', 'repoName', 'description', 'year', 'author', 'githubUser', 'license', 'licenseId', 'licenseTitle']) {
+  for (const key of [
+    'name',
+    'projectName',
+    'repoName',
+    'description',
+    'year',
+    'author',
+    'githubUser',
+    'license',
+    'licenseId',
+    'licenseTitle',
+    'generatorRepoUrl',
+    'primaryLanguage',
+    'runtimeSummary',
+    'installCommand',
+    'testCommand',
+    'codeFenceLanguage',
+    'usageExample',
+    'ciSummary',
+  ]) {
     if (typeof values[key] !== 'string' || values[key] === '') {
       errors.push(`values.${key} must be a non-empty string.`);
     }
   }
+  if (typeof values.ciBadge !== 'string') errors.push('values.ciBadge must be a string.');
   if (!isObject(options) || !LANGS.has(options.lang)) return;
 
   const sourceName = options.lang === 'node' ? values.packageName : values.pythonDistribution;
@@ -120,6 +144,15 @@ function validateValues(values, options, errors) {
     }
     if (options.lang === 'python' && values.nameSnake !== expected.pythonImport) {
       errors.push('values.nameSnake does not match values.pythonImport.');
+    }
+    const expectedTemplateValues = deriveTemplateValues(expected, options.lang, {
+      ci: options.ci,
+      githubUser: values.githubUser,
+    });
+    for (const [key, expectedValue] of Object.entries(expectedTemplateValues)) {
+      if (values[key] !== expectedValue) {
+        errors.push(`values.${key} does not match the derived template metadata.`);
+      }
     }
   } catch (error) {
     errors.push(`values identity is invalid: ${error.message}`);

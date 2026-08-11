@@ -10,7 +10,7 @@
 
 <!-- How did you verify these changes? -->
 
-- [ ] `npm test` passes
+- [ ] `{{testCommand}}` passes
 - [ ] Code follows the project style (see CONTRIBUTING.md)
 
 ## Related issues

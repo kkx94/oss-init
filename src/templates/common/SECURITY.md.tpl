@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the latest released version of {{name}} is supported with security updates.
+Only the latest released version of {{projectName}} is supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
