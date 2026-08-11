@@ -1,6 +1,6 @@
 {
   "name": "@kkx94/oss-init",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Scaffold, audit, and safely refresh bilingual Node and Python open-source repositories. Zero runtime dependencies.",
   "type": "module",
   "bin": {

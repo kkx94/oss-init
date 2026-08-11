@@ -16,7 +16,7 @@ const TEMPLATE_ROOT = join(__dirname, '..', 'templates');
 
 export function initHelpText() {
   return [
-    'oss-init init - Scaffold a production-grade open source repository',
+    'oss-init init - Scaffold an open source repository',
     '',
     'Usage:',
     '  oss-init init [target-dir] [options]',

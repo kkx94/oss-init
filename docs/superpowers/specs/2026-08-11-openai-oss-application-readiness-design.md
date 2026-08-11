@@ -79,8 +79,8 @@ not merely a repository with community files and self-reported scores.
    invalid path-derived values.
 5. Store `schemaVersion` separately from the installed generator version.
 6. Guarantee temporary-directory cleanup on every success and failure path.
-7. Remove the personal `opencode.json` from the public product repository and
-   ignore it. A sanitized example may be kept only if it has contributor value.
+7. Keep personal machine and tool configuration out of the public product
+   repository. Add examples only when they have documented contributor value.
 8. Correct stale template links, README wording, sample output, changelog dates,
    and repository metadata.
 

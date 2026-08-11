@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-11
+
+### Added
+
+- Added `--github-user` so generated repository links can use the GitHub login independently of the LICENSE and commit author.
+- Added an explicit manifest schema with validation and migration support for manifests written by v0.2.x and v0.3.0.
+- Added Linux and Windows coverage to generated Node.js and Python CI workflows, with a stable aggregate `CI` check for branch protection.
+- Added release verification for tag/package identity, package contents, public registry visibility, and clean-directory `npx` execution.
+
+### Changed
+
+- Scoped Node.js package names keep their npm identity while repository names and JavaScript identifiers use safe unscoped forms.
+- Python project names now reject npm scopes and safely derive import names from dots, hyphens, digits, and Python keywords.
+- Node.js 22 is now the minimum supported runtime. Parent CI covers Node.js 22, 24, and 26 on Linux plus Node.js 24 on Windows.
+- Generated documentation and workflows now reflect the selected Node.js or Python project type instead of mixing ecosystem-specific instructions.
+- Release automation now creates a GitHub Release only after npm publication, public registry read-back, and a clean `npx` acceptance check succeed.
+
+### Fixed
+
+- Manifest paths, values, and SHA-256 hashes are fully validated before rendering or writing; target writes also enforce directory containment.
+- Updates use temporary rendering and atomic file writes, clean up temporary data on every exit path, and preserve user-modified or retired files unless `--force` is supplied.
+- `check --fix` now adds only missing files and does not overwrite an existing README.
+- Removed stale runtime claims, fixed encoding artifacts, and made installation status explicit before the first public npm release.
+
 ## [0.3.0] - 2026-08-10
 
 ### Changed
