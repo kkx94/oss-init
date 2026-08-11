@@ -2,10 +2,10 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SECTIONS = {
-  install: /\n#+\s*(install|installation|getting started)/i,
-  usage: /\n#+\s*(usage|how to use|features|examples?)/i,
-  license: /\n#+\s*(licen[sc]e|copying)/i,
-  contributing: /\n#[^#\n]*\bcontributing\b|\(contributing\.md\)/i,
+  install: /\n#+\s*(install|installation|getting started|安装|快速开始|入门)/iu,
+  usage: /\n#+\s*(usage|how to use|features|examples?|使用|用法|功能|示例)/iu,
+  license: /\n#+\s*(licen[sc]e|copying|许可证|许可协议)/iu,
+  contributing: /\n#[^#\n]*(\bcontributing\b|贡献)|\(contributing\.md\)/iu,
 };
 
 function fileExists(dir, rel) {
@@ -20,6 +20,15 @@ function readIfExists(dir, rel) {
 function hasHeading(content, pattern) {
   if (!content) return false;
   return pattern.test(content);
+}
+
+export function readmeSubstanceStatus(content) {
+  if (!content) return 'fail';
+  const latinWords = content.match(/[A-Za-z0-9][A-Za-z0-9'_~-]*/g)?.length ?? 0;
+  const hanCharacters = content.match(/\p{Script=Han}/gu)?.length ?? 0;
+  if (latinWords >= 200 || hanCharacters >= 300) return 'pass';
+  if (latinWords >= 50 || hanCharacters >= 80) return 'warn';
+  return 'fail';
 }
 
 export const WEIGHTS = {
@@ -87,13 +96,11 @@ export const RULES = [
   },
   {
     id: 'readmeLength',
-    name: 'README is at least 200 words and not a stub',
+    name: 'README has substantial content and is not a stub',
     weight: WEIGHTS.readmeLength,
     run: (dir) => {
       const c = readIfExists(dir, 'README.md') || readIfExists(dir, 'readme.md');
-      if (!c) return 'fail';
-      const words = c.split(/\s+/).filter(Boolean).length;
-      return words >= 200 ? 'pass' : words >= 50 ? 'warn' : 'fail';
+      return readmeSubstanceStatus(c);
     },
   },
   {

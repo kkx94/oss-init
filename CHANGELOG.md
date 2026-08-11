@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a reproducible end-to-end demo that scaffolds, tests, audits, and previews updates for temporary Node.js and Python projects; parent CI runs it on every change.
+- Added a structured adoption-report issue template for public downstream projects.
+- Added Chinese project documentation and clearer entry points for users and first-time contributors.
+
+### Changed
+
+- Expanded generated READMEs with concrete customization, development, and release guidance.
+- Made the hygiene audit recognize Chinese section headings and measure Chinese prose without relying on whitespace-delimited word counts.
+
 ## [0.3.1] - 2026-08-11
 
 ### Added

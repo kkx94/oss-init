@@ -48,13 +48,25 @@ jobs:
           node-version: 24.x
       - run: npm pack --dry-run --json
 
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: npm run demo
+
   CI:
     name: CI
     runs-on: ubuntu-latest
-    needs: [test, windows, package]
+    needs: [test, windows, package, demo]
     if: always()
     steps:
       - name: Require every test and package job
-        if: ${{ needs.test.result != 'success' || needs.windows.result != 'success' || needs.package.result != 'success' }}
+        if: ${{ needs.test.result != 'success' || needs.windows.result != 'success' || needs.package.result != 'success' || needs.demo.result != 'success' }}
         run: exit 1
       - run: echo "All required jobs passed."

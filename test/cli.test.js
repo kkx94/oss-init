@@ -64,6 +64,18 @@ test('python template now scaffolds a working Python project', () => {
   }
 });
 
+test('generated Chinese documentation passes the same hygiene audit', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-zh-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--lang', 'node', '--docs', 'zh', '--ci']);
+    const report = JSON.parse(runCli(['check', dir, '--json']));
+    assert.equal(report.score, 100);
+    assert.equal(report.results.every((result) => result.status === 'pass'), true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('python template path placeholders are fully replaced', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-py-'));
   try {
