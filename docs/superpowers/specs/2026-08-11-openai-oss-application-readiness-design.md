@@ -2,7 +2,7 @@
 
 Date: 2026-08-11  
 Target application date: 2026-09-10  
-Status: Approved direction; written specification awaiting final user review
+Status: Approved for implementation
 
 ## Objective
 
