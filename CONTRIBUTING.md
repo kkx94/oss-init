@@ -37,7 +37,9 @@ Enhancement suggestions are tracked as GitHub issues. When you are creating an e
 3. If you've changed behavior, update the README.
 4. Ensure the test suite passes (`npm test`).
 5. Make sure your code lints cleanly (`npm run lint`).
-6. Issue that pull request!
+6. For template or CLI-flow changes, run the end-to-end demo (`npm run demo`; Python 3 required).
+7. Confirm the package contents (`npm pack --dry-run --json`).
+8. Issue that pull request!
 
 #### Pull Request Checklist
 
@@ -45,6 +47,7 @@ Enhancement suggestions are tracked as GitHub issues. When you are creating an e
 - [ ] I have followed the code style of the project
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
+- [ ] The end-to-end demo passes when this change affects generated output or CLI flows
 - [ ] I have checked that there are no unresolved placeholders or TODOs
 
 ## Style Guide

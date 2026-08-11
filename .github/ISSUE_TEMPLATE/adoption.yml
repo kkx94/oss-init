@@ -1,0 +1,54 @@
+name: Adoption report
+description: Tell us how a public project uses oss-init
+title: "[Adoption]: "
+labels: [adoption]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using oss-init. Please only submit a repository you are allowed to share publicly.
+        Reports are reviewed before any project is listed as an adopter.
+  - type: input
+    id: repository
+    attributes:
+      label: Public repository URL
+      description: Link to the public repository where oss-init was used.
+      placeholder: https://github.com/owner/project
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Project language
+      options:
+        - Node.js
+        - Python
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: commands
+    attributes:
+      label: How do you use oss-init?
+      options:
+        - label: Scaffold a new repository
+        - label: Audit repository hygiene with `check`
+        - label: Refresh generated files with `update`
+  - type: textarea
+    id: experience
+    attributes:
+      label: Experience and outcome
+      description: What did oss-init help with, and what could be improved?
+      placeholder: Describe the concrete workflow, useful results, and any friction.
+    validations:
+      required: true
+  - type: dropdown
+    id: listing-consent
+    attributes:
+      label: Public listing permission
+      description: May we link this repository from oss-init documentation as a verified adopter?
+      options:
+        - Yes, you may list it
+        - No, keep it in this issue only
+    validations:
+      required: true

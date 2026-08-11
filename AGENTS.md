@@ -29,10 +29,11 @@ oss-init is a zero-runtime-dependency Node.js CLI. It scaffolds a documented Nod
 ```bash
 npm test
 npm run lint
+npm run demo
 npm pack --dry-run --json
 ```
 
-All applicable checks must pass before a change is submitted. Add or update tests for behavior changes. Changes to templates should be verified for both Node.js and Python output where relevant.
+All applicable checks must pass before a change is submitted. The end-to-end demo requires Python 3 and uses only temporary files. Add or update tests for behavior changes. Changes to templates should be verified for both Node.js and Python output where relevant.
 
 ## Change process
 

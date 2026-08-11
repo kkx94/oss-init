@@ -2,6 +2,8 @@
 
 Scaffold, audit, and safely refresh bilingual Node.js and Python open source repositories.
 
+English | [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/kkx94/oss-init/actions/workflows/ci.yml/badge.svg)](https://github.com/kkx94/oss-init/actions/workflows/ci.yml)
 ![Zero runtime dependencies](https://img.shields.io/badge/runtime_dependencies-0-brightgreen)
 ![License](https://img.shields.io/github/license/kkx94/oss-init)
@@ -15,7 +17,7 @@ Scaffold, audit, and safely refresh bilingual Node.js and Python open source rep
 
 The CLI has no runtime dependencies and no build step. It supports Node.js 22 and newer.
 
-## Project status
+## Installation status
 
 The scoped package `@kkx94/oss-init` is not yet available from the public npm registry. Version 0.3.1 is being prepared for its first verified npm publication. Until the npm package page resolves, run the CLI from a source checkout:
 
@@ -40,6 +42,29 @@ The unscoped npm name `oss-init` belongs to another maintainer. The installed co
 New repositories often repeat the same setup work: licensing, contributor guidance, security reporting, issue templates, tests, and CI. `oss-init` turns those pieces into a reproducible starting point for small and medium Node.js or Python projects, including English and Chinese documentation.
 
 The generated output is intentionally a baseline, not a certification. Maintainers remain responsible for adapting policies, validating release settings, and documenting their actual project behavior.
+
+## Reproducible demo
+
+Run one command from a source checkout to exercise the real CLI end to end. The demo creates temporary Node.js and Python repositories, runs their generated tests, verifies a 100/100 hygiene result, previews a safe update, and removes the temporary files. It does not use the network or modify the checkout.
+
+```bash
+npm run demo
+```
+
+Expected summary (the commands themselves are executed, not simulated):
+
+```text
+✓ Scaffolded a bilingual Node.js repository
+✓ Generated Node.js tests passed
+✓ node-demo hygiene audit passed (100/100)
+✓ Safe refresh preview completed without changing files
+✓ Scaffolded a bilingual Python repository
+✓ Generated Python tests passed
+✓ python-demo hygiene audit passed (100/100)
+✓ End-to-end demo passed
+```
+
+The same demo runs in [GitHub Actions](https://github.com/kkx94/oss-init/actions/workflows/ci.yml), so the README flow is continuously checked on Linux with current Node.js and Python runtimes.
 
 ## Usage
 
@@ -138,6 +163,7 @@ oss-init check --fix
 ```bash
 npm test
 npm run lint
+npm run demo
 node bin/oss-init.js check
 npm pack --dry-run --json
 ```
@@ -152,6 +178,12 @@ The parent repository tests Node.js 22, 24, and 26 on Linux and Node.js 24 on Wi
 - [Changelog](CHANGELOG.md)
 - [Guidance for coding agents](AGENTS.md)
 
+## Community
+
+- Already using oss-init in a public repository? [Submit an adoption report](https://github.com/kkx94/oss-init/issues/new?template=adoption.yml). Reports are verified before a project is listed; no adoption is inferred from stars or downloads.
+- Found a bug or have a concrete workflow request? [Open an issue](https://github.com/kkx94/oss-init/issues/new/choose).
+- Looking for a first contribution? Custom template directory support is scoped in [#3](https://github.com/kkx94/oss-init/issues/3) and marked `good first issue` / `help wanted`.
+
 ## Roadmap
 
 - [x] Python templates
@@ -161,6 +193,6 @@ The parent repository tests Node.js 22, 24, and 26 on Linux and Node.js 24 on Wi
 - [ ] Configurable rule sets for `check`
 - [ ] Additional language templates driven by user demand
 
-## Maintainer and license
+## License and maintainer
 
 Maintained by [kkx94](https://github.com/kkx94). Licensed under the [MIT License](LICENSE).
