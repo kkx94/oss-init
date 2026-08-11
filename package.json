@@ -1,7 +1,7 @@
 {
   "name": "@kkx94/oss-init",
-  "version": "0.3.0",
-  "description": "Scaffold, audit, and refresh production-grade open source repositories. Bilingual README, LICENSE, community files, CI/CD, and a health checker. Zero dependencies.",
+  "version": "0.3.1",
+  "description": "Scaffold, audit, and safely refresh bilingual Node and Python open-source repositories. Zero runtime dependencies.",
   "type": "module",
   "bin": {
     "oss-init": "bin/oss-init.js"
@@ -12,11 +12,11 @@
     "src"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "test": "node --test",
-    "lint": "node --check bin/oss-init.js && node --check src/cli.js && node --check src/args.js && node --check src/validate.js && node --check src/prompts.js && node --check src/render.js && node --check src/checks.js && node --check src/commands/init.js && node --check src/commands/check.js && node --check src/commands/update.js"
+    "lint": "node --check bin/oss-init.js && node --check src/cli.js && node --check src/args.js && node --check src/validate.js && node --check src/project-identity.js && node --check src/manifest.js && node --check src/prompts.js && node --check src/render.js && node --check src/checks.js && node --check src/commands/init.js && node --check src/commands/check.js && node --check src/commands/update.js && node --check scripts/verify-release.js"
   },
   "keywords": [
     "cli",

@@ -1,7 +1,8 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
-const NAME_PATTERN = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+const NAME_PATTERN = /^(?:@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/;
+const PYTHON_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/;
 
 export function validateName(name) {
   const errors = [];
@@ -26,6 +27,30 @@ export function validateName(name) {
 
 export function isValidName(name) {
   return validateName(name).ok;
+}
+
+export function validatePythonName(name) {
+  const errors = [];
+  if (!name || name.trim() === '') {
+    errors.push('Project name must not be empty.');
+    return { ok: false, errors };
+  }
+  if (name.startsWith('@')) {
+    errors.push(
+      'Python project names cannot use npm scoped syntax (@scope/pkg). Use a plain name like "my-app" with --lang python.',
+    );
+    return { ok: false, errors };
+  }
+  if (!PYTHON_NAME_PATTERN.test(name)) {
+    errors.push(
+      'Python project name must start and end with a lowercase letter or digit and use only letters, digits, hyphens, underscores, and dots (e.g. "my-app").',
+    );
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+export function isValidPythonName(name) {
+  return validatePythonName(name).ok;
 }
 
 export function dirIsEmpty(dir) {

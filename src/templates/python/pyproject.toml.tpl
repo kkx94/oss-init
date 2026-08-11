@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "{{name}}"
+name = "{{pythonDistribution}}"
 version = "0.1.0"
 description = "{{description}}"
 readme = "README.md"
@@ -13,6 +13,7 @@ authors = [
   { name = "{{author}}" }
 ]
 keywords = []
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
@@ -21,10 +22,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/{{githubUser}}/{{name}}"
+Homepage = "https://github.com/{{githubUser}}/{{repoName}}"
+Issues = "https://github.com/{{githubUser}}/{{repoName}}/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/{{nameSnake}}"]
+packages = ["src/{{pythonImport}}"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

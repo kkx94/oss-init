@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { parseArgs, CHECK_FLAG_DEFS } from '../args.js';
 import { runChecks, score, MAX_SCORE } from '../checks.js';
+import { deriveProjectIdentity, deriveTemplateValues, resolveGithubMetadata } from '../project-identity.js';
 import { render } from '../render.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,7 +39,7 @@ export function checkHelpText() {
 
 function gitConfig(key) {
   try {
-    return execSync(`git config --get ${key}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+    return execFileSync('git', ['config', '--get', key], { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {
@@ -101,28 +102,39 @@ export function runCheck(argv, { version }) {
       if (!options.quiet) process.stdout.write('No missing community files to generate.\n');
     } else {
       const nameGuess = guessName(targetDir);
-      const values = {
-        name: nameGuess,
-        nameCamel: nameGuess.replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
-        description: `A project, scaffolded with oss-init.`,
-        year: String(new Date().getFullYear()),
-        author: gitConfig('user.name') || nameGuess,
-        githubUser: gitConfig('user.name') || 'your-username',
-        license: 'mit',
-        licenseId: 'MIT',
-        licenseTitle: 'MIT License',
-      };
       const lang = existsSync(join(targetDir, 'pyproject.toml')) && !existsSync(join(targetDir, 'package.json'))
         ? 'python'
         : 'node';
+      const identity = deriveProjectIdentity(nameGuess, lang);
+      const metadata = resolveGithubMetadata({ gitUserName: gitConfig('user.name') });
+      const hasCi = missing.some((result) => result.id === 'ci');
+      const values = {
+        name: identity.packageName || identity.pythonDistribution,
+        ...identity,
+        projectBase: identity.projectName,
+        nameCamel: identity.jsIdentifier || identity.projectName,
+        nameSnake: identity.pythonImport || identity.projectName.replace(/[-._~]+/g, '_'),
+        description: `A project, scaffolded with oss-init.`,
+        year: String(new Date().getFullYear()),
+        author: metadata.author,
+        githubUser: metadata.githubUser,
+        license: 'mit',
+        licenseId: 'MIT',
+        licenseTitle: 'MIT License',
+        ...deriveTemplateValues(identity, lang, {
+          ci: hasCi,
+          githubUser: metadata.githubUser,
+        }),
+      };
       const renderResult = render({
         templateRoot: TEMPLATE_ROOT,
         targetDir,
         values,
         docs: 'en',
-        ci: missing.some((r) => r.id === 'ci'),
+        ci: hasCi,
         publish: false,
         agents: false,
+        onlyMissing: true,
         lang,
       });
       if (renderResult.errors.length > 0) {

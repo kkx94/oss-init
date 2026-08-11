@@ -5,10 +5,10 @@
 
 ## 1. Purpose
 
-`oss-init` is a zero-dependency Node.js CLI that scaffolds a production-grade
-open source repository in one command: professional README (bilingual
-en/zh-CN), LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG,
-.gitignore, and complete GitHub Actions CI/CD + release workflows.
+`oss-init` is a zero-runtime-dependency Node.js CLI that scaffolds a documented
+open source repository baseline: language-appropriate READMEs, LICENSE,
+CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, .gitignore, starter code,
+tests, and optional GitHub Actions CI/CD and release workflows.
 
 It solves the repetitive boilerplate work every open source maintainer faces
 when starting a new repository, and provides a genuinely usable, high-quality
@@ -23,8 +23,9 @@ starting point instead of empty placeholders.
 
 - **Strictly zero runtime dependencies.** Argument parsing is hand-written,
   interactive prompts use `node:readline/promises`, tests use `node:test`.
-- Node.js >= 18, pure ESM.
-- No build step. `npx oss-init` works out of the box.
+- Node.js >= 22, pure ESM.
+- No build step. The public package is `@kkx94/oss-init`; npm execution is
+  supported only after a version is visibly published to the public registry.
 
 ## 4. CLI Design
 

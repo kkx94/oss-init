@@ -7,6 +7,8 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 
+import { resolveContainedPath } from './manifest.js';
+
 const PLACEHOLDER_RE = /{{\s*([a-zA-Z0-9_-]+)\s*}}/g;
 
 const README_SPEC = {
@@ -120,14 +122,17 @@ function walkLang(lang, relDir, filesWritten, warnings, errors, ctx) {
 }
 
 function writeRendered(targetDir, target, content, values, filesWritten, errors, onlyMissing = false, dryRun = false) {
+  let missingPathValue = false;
   const renderedTarget = target.replace(PLACEHOLDER_RE, (match, key) => {
     if (values[key] === undefined) {
       errors.push(`Template value missing for "${match}" in path ${target}`);
+      missingPathValue = true;
       return match;
     }
     return String(values[key]);
   });
-  const outPath = join(targetDir, renderedTarget);
+  if (missingPathValue) return;
+  const outPath = resolveContainedPath(targetDir, renderedTarget);
   if (onlyMissing && existsSync(outPath)) return;
 
   const rendered = content.replace(PLACEHOLDER_RE, (match, key) => {
@@ -138,8 +143,8 @@ function writeRendered(targetDir, target, content, values, filesWritten, errors,
     return String(values[key]);
   });
 
-  if (PLACEHOLDER_RE.test(rendered)) {
-    const leftover = rendered.match(PLACEHOLDER_RE);
+  const leftover = rendered.match(PLACEHOLDER_RE);
+  if (leftover) {
     errors.push(
       `Unresolved placeholder${leftover.length > 1 ? 's' : ''} in ${target}: ${[...new Set(leftover)].join(', ')}`,
     );

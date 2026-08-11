@@ -1,5 +1,5 @@
 {
-  "name": "{{name}}",
+  "name": "{{packageName}}",
   "version": "0.1.0",
   "description": "{{description}}",
   "type": "module",
@@ -8,13 +8,22 @@
     "src"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "lint": "node --check src/index.js && node --check test/index.test.js"
   },
   "keywords": [],
   "license": "{{licenseId}}",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/{{githubUser}}/{{repoName}}.git"
+  },
+  "homepage": "https://github.com/{{githubUser}}/{{repoName}}#readme",
+  "bugs": {
+    "url": "https://github.com/{{githubUser}}/{{repoName}}/issues"
+  },
   "dependencies": {},
   "devDependencies": {}
 }

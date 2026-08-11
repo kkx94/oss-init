@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { basename, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { render } from '../src/render.js';
@@ -11,6 +11,13 @@ const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src',
 
 const BASE_VALUES = {
   name: 'demo-app',
+  packageName: 'demo-app',
+  projectName: 'demo-app',
+  projectBase: 'demo-app',
+  repoName: 'demo-app',
+  jsIdentifier: 'demoApp',
+  pythonDistribution: null,
+  pythonImport: null,
   nameCamel: 'demoApp',
   nameSnake: 'demo_app',
   description: 'A demo project.',
@@ -20,9 +27,18 @@ const BASE_VALUES = {
   license: 'mit',
   licenseId: 'MIT',
   licenseTitle: 'MIT License',
+  generatorRepoUrl: 'https://github.com/kkx94/oss-init',
+  primaryLanguage: 'JavaScript',
+  runtimeSummary: 'Node.js >= 22 (ES modules)',
+  installCommand: 'npm install',
+  testCommand: 'npm test',
+  codeFenceLanguage: 'js',
+  usageExample: "import { add } from './src/index.js';\n\nconsole.log(add(1, 2));",
+  ciBadge: '![CI](https://github.com/demo-user/demo-app/actions/workflows/ci.yml/badge.svg)',
+  ciSummary: 'GitHub Actions CI included',
 };
 
-function renderToTemp(overrides = {}) {
+function renderToTemp(overrides = {}, renderOverrides = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-render-'));
   const result = render({
     templateRoot: TEMPLATE_ROOT,
@@ -31,6 +47,8 @@ function renderToTemp(overrides = {}) {
     docs: 'bilingual',
     ci: true,
     publish: true,
+    lang: 'node',
+    ...renderOverrides,
   });
   return { dir, result };
 }
@@ -119,7 +137,7 @@ test('docs=zh writes Chinese content as the main README', () => {
       publish: false,
     });
     const readme = readFileSync(join(dir, 'README.md'), 'utf8');
-    assert.match(readme, /特性/);
+    assert.match(readme, /已包含的基础能力/);
     assert.equal(existsSync(join(dir, 'README.zh-CN.md')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -196,7 +214,25 @@ test('python template renders with snake_case package paths', () => {
     const result = render({
       templateRoot: TEMPLATE_ROOT,
       targetDir: dir,
-      values: { ...BASE_VALUES, name: 'my-cool-lib', nameSnake: 'my_cool_lib' },
+      values: {
+        ...BASE_VALUES,
+        name: 'my-cool-lib',
+        packageName: null,
+        projectName: 'my-cool-lib',
+        projectBase: 'my-cool-lib',
+        repoName: 'my-cool-lib',
+        jsIdentifier: null,
+        pythonDistribution: 'my-cool-lib',
+        pythonImport: 'my_cool_lib',
+        nameCamel: 'my-cool-lib',
+        nameSnake: 'my_cool_lib',
+        primaryLanguage: 'Python',
+        runtimeSummary: 'Python >= 3.10',
+        installCommand: 'python -m pip install -e ".[dev]"',
+        testCommand: 'python -m unittest discover -s tests',
+        codeFenceLanguage: 'python',
+        usageExample: 'from my_cool_lib import add\n\nprint(add(1, 2))',
+      },
       docs: 'en',
       ci: true,
       publish: true,
@@ -212,5 +248,132 @@ test('python template renders with snake_case package paths', () => {
     assert.doesNotMatch(pyproject, /\{\{/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rendered templates use the real generator and repository identities', () => {
+  const { dir, result } = renderToTemp({
+    name: '@scope/my-lib',
+    packageName: '@scope/my-lib',
+    projectName: 'my-lib',
+    projectBase: 'my-lib',
+    repoName: 'my-lib',
+    jsIdentifier: 'myLib',
+    nameCamel: 'myLib',
+    nameSnake: 'my_lib',
+    ciBadge: '![CI](https://github.com/demo-user/my-lib/actions/workflows/ci.yml/badge.svg)',
+  });
+  try {
+    assert.deepEqual(result.errors, []);
+    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+    assert.equal(pkg.name, '@scope/my-lib');
+    assert.equal(pkg.repository.url, 'git+https://github.com/demo-user/my-lib.git');
+    const allText = collectFiles(dir).map((file) => readFileSync(file, 'utf8')).join('\n');
+    assert.match(allText, /https:\/\/github\.com\/kkx94\/oss-init/);
+    assert.doesNotMatch(allText, /github\.com\/oss-init\/oss-init/);
+    assert.doesNotMatch(allText, /github\.com\/demo-user\/@scope\/my-lib/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('rendered text contains no stale claims or encoding corruption', () => {
+  const { dir } = renderToTemp();
+  try {
+    const allText = collectFiles(dir).map((file) => readFileSync(file, 'utf8')).join('\n');
+    assert.doesNotMatch(allText, /branch tax|Score:\s*100|production-grade|Actively maintained/);
+    assert.doesNotMatch(allText, /\uFFFD|鈥|鐗|鑴/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('generated Node workflows use maintained runtimes and fail closed', () => {
+  const { dir } = renderToTemp();
+  try {
+    const ci = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8');
+    const release = readFileSync(join(dir, '.github', 'workflows', 'release.yml'), 'utf8');
+    assert.match(ci, /node-version: \[22\.x, 24\.x\]/);
+    assert.match(ci, /windows-latest/);
+    assert.match(ci, /name: CI/);
+    assert.match(ci, /actions\/checkout@v5/);
+    assert.match(ci, /actions\/setup-node@v5/);
+    assert.match(release, /npm publish --access public --provenance/);
+    assert.match(release, /npm view/);
+    assert.match(release, /actions\/checkout@v5/);
+    assert.match(release, /actions\/setup-node@v5/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout|setup-node)@v4/);
+    assert.doesNotMatch(release, /if:\s*env\.NODE_AUTH_TOKEN\s*!=/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('generated Python metadata, docs, and CI use Python identities', () => {
+  const pythonValues = {
+    ...BASE_VALUES,
+    name: 'my.cool-lib',
+    packageName: null,
+    projectName: 'my.cool-lib',
+    projectBase: 'my.cool-lib',
+    repoName: 'my.cool-lib',
+    jsIdentifier: null,
+    pythonDistribution: 'my.cool-lib',
+    pythonImport: 'my_cool_lib',
+    nameCamel: 'my.cool-lib',
+    nameSnake: 'my_cool_lib',
+    primaryLanguage: 'Python',
+    runtimeSummary: 'Python >= 3.10',
+    installCommand: 'python -m pip install -e ".[dev]"',
+    testCommand: 'python -m unittest discover -s tests',
+    codeFenceLanguage: 'python',
+    usageExample: 'from my_cool_lib import add\n\nprint(add(1, 2))',
+  };
+  const { dir, result } = renderToTemp(pythonValues, { lang: 'python' });
+  try {
+    assert.deepEqual(result.errors, []);
+    const pyproject = readFileSync(join(dir, 'pyproject.toml'), 'utf8');
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+    const ci = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8');
+    const release = readFileSync(join(dir, '.github', 'workflows', 'release.yml'), 'utf8');
+    assert.match(pyproject, /name = "my\.cool-lib"/);
+    assert.match(pyproject, /packages = \["src\/my_cool_lib"\]/);
+    assert.match(pyproject, /github\.com\/demo-user\/my\.cool-lib/);
+    assert.match(readme, /Python >= 3\.10/);
+    assert.match(readme, /from my_cool_lib import add/);
+    assert.doesNotMatch(readme, /Node\.js/);
+    assert.match(ci, /windows-latest/);
+    assert.match(ci, /name: CI/);
+    assert.match(ci, /actions\/checkout@v5/);
+    assert.match(ci, /actions\/setup-python@v6/);
+    assert.match(release, /actions\/checkout@v5/);
+    assert.match(release, /actions\/setup-python@v6/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout@v4|setup-python@v5)/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('render refuses a placeholder-derived destination outside the target directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-render-safe-'));
+  const escapedName = `oss-init-escaped-${basename(dir)}`;
+  const escaped = join(dirname(dir), escapedName);
+  try {
+    assert.throws(
+      () => render({
+        templateRoot: TEMPLATE_ROOT,
+        targetDir: dir,
+        values: { ...BASE_VALUES, pythonImport: `../../${escapedName}` },
+        docs: 'en',
+        ci: false,
+        publish: false,
+        lang: 'python',
+      }),
+      /safe relative path|outside target directory/,
+    );
+    assert.equal(existsSync(escaped), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(escaped, { recursive: true, force: true });
   }
 });

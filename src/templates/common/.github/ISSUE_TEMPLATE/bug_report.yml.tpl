@@ -37,7 +37,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Which version of {{name}} are you using?
+      description: Which version of {{projectName}} are you using?
       placeholder: "0.1.0"
     validations:
       required: true
@@ -45,10 +45,10 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, Node.js version, and any other relevant details.
+      description: OS, runtime version, and any other relevant details.
       placeholder: |
         OS: Ubuntu 24.04
-        Node: v22.5.0
+        Runtime: {{runtimeSummary}}
   - type: textarea
     id: logs
     attributes:

@@ -52,8 +52,8 @@ Enhancement suggestions are tracked as GitHub issues. When you are creating an e
 - ES Modules (`import` / `export`), no CommonJS
 - 2-space indentation, no semicolons
 - Small, focused functions with clear names
-- **No runtime dependencies** �?a new dependency must be justified
-- Keep the generated output professional and useful �?no empty shells
+- **No runtime dependencies** — a new dependency must be justified
+- Keep the generated output professional and useful — no empty shells
 
 ## Git Commit Messages
 
