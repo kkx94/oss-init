@@ -6,34 +6,55 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [22.x, 24.x, 26.x]
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       - run: npm test
       - run: npm run lint
 
-  # Aggregate job whose check-run name matches the branch protection
-  # required_status_check context "CI". Branch protection requires "CI",
-  # not "test (18.x)" / "test (20.x)" / "test (22.x)".
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: npm test
+      - run: npm run lint
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - run: npm pack --dry-run --json
+
   CI:
     name: CI
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, windows, package]
     if: always()
     steps:
-      - name: Report aggregate result
-        if: ${{ needs.test.result != 'success' }}
-        run: |
-          echo "One or more test matrix jobs failed."
-          exit 1
-      - name: All green
-        run: echo "All test matrix jobs passed."
+      - name: Require every test and package job
+        if: ${{ needs.test.result != 'success' || needs.windows.result != 'success' || needs.package.result != 'success' }}
+        run: exit 1
+      - run: echo "All required jobs passed."

@@ -3,34 +3,54 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.x
           registry-url: https://registry.npmjs.org/
-      - name: Verify NPM_TOKEN secret is configured
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN secret is empty. Create it in Settings > Secrets and variables > Actions, then re-run this workflow from the tag."
-            exit 1
-          fi
+      - name: Verify tag and package identity
+        run: node scripts/verify-release.js "$GITHUB_REF_NAME"
+      - name: Require npm publication credential
+        run: test -n "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm test
-      - name: Publish to npm (public, scoped)
-        run: npm publish --access public
+      - run: npm run lint
+      - run: npm pack --dry-run --json
+      - name: Publish public package with provenance
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify public registry and clean npx execution
+        shell: bash
+        env:
+          PACKAGE_NAME: "@kkx94/oss-init"
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          for attempt in {1..12}; do
+            actual="$(npm view "$PACKAGE_NAME@$expected" version --registry=https://registry.npmjs.org/ 2>/dev/null || true)"
+            if [ "$actual" = "$expected" ]; then
+              clean_dir="$(mktemp -d)"
+              cd "$clean_dir"
+              cli_version="$(npx --yes --package "$PACKAGE_NAME@$expected" oss-init --version)"
+              if [ "$cli_version" = "$expected" ]; then
+                exit 0
+              fi
+            fi
+            sleep 10
+          done
+          echo "Published package did not pass public registry and clean npx verification."
+          exit 1
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
