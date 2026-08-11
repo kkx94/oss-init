@@ -296,13 +296,14 @@ test('generated Node workflows use maintained runtimes and fail closed', () => {
     assert.match(ci, /node-version: \[22\.x, 24\.x\]/);
     assert.match(ci, /windows-latest/);
     assert.match(ci, /name: CI/);
-    assert.match(ci, /actions\/checkout@v5/);
-    assert.match(ci, /actions\/setup-node@v5/);
+    assert.match(ci, /actions\/checkout@v7/);
+    assert.match(ci, /actions\/setup-node@v7/);
     assert.match(release, /npm publish --access public --provenance/);
     assert.match(release, /npm view/);
-    assert.match(release, /actions\/checkout@v5/);
-    assert.match(release, /actions\/setup-node@v5/);
-    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout|setup-node)@v4/);
+    assert.match(release, /actions\/checkout@v7/);
+    assert.match(release, /actions\/setup-node@v7/);
+    assert.match(release, /softprops\/action-gh-release@v3/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout|setup-node)@v[1-6]/);
     assert.doesNotMatch(release, /if:\s*env\.NODE_AUTH_TOKEN\s*!=/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -344,11 +345,12 @@ test('generated Python metadata, docs, and CI use Python identities', () => {
     assert.doesNotMatch(readme, /Node\.js/);
     assert.match(ci, /windows-latest/);
     assert.match(ci, /name: CI/);
-    assert.match(ci, /actions\/checkout@v5/);
-    assert.match(ci, /actions\/setup-python@v6/);
-    assert.match(release, /actions\/checkout@v5/);
-    assert.match(release, /actions\/setup-python@v6/);
-    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout@v4|setup-python@v5)/);
+    assert.match(ci, /actions\/checkout@v7/);
+    assert.match(ci, /actions\/setup-python@v7/);
+    assert.match(release, /actions\/checkout@v7/);
+    assert.match(release, /actions\/setup-python@v7/);
+    assert.match(release, /softprops\/action-gh-release@v3/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout|setup-python)@v[1-6]/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
