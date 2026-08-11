@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Extended the bounded post-publish npm registry verification window from two to five minutes in the parent and generated Node.js release workflows, covering slower first-package metadata propagation without republishing.
+
 ## [0.4.0] - 2026-08-12
 
 ### Added
