@@ -309,6 +309,7 @@ test('generated Node workflows use maintained runtimes and fail closed', () => {
     assert.match(ci, /actions\/setup-node@v7/);
     assert.match(release, /npm publish --access public --provenance/);
     assert.match(release, /npm view/);
+    assert.match(release, /for attempt in \{1\.\.30\}/);
     assert.match(release, /actions\/checkout@v7/);
     assert.match(release, /actions\/setup-node@v7/);
     assert.match(release, /softprops\/action-gh-release@v3/);

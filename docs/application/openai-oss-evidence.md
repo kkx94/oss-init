@@ -4,7 +4,7 @@ This file records evidence for a planned application around 2026-09-10. It separ
 
 ## Snapshot
 
-Evidence checked on 2026-08-12 at approximately 03:36 (Asia/Shanghai).
+Evidence checked on 2026-08-12 at approximately 05:41 (Asia/Shanghai).
 
 ### Public repository facts
 
@@ -12,21 +12,23 @@ Evidence checked on 2026-08-12 at approximately 03:36 (Asia/Shanghai).
 |---|---|
 | Repository | [`kkx94/oss-init`](https://github.com/kkx94/oss-init), public and not archived |
 | Created | 2026-08-10 08:02:49 UTC |
-| Audited product commit | `9431e4f386c93ae61b1602e1575eca1842be11aa`; documentation-only evidence updates may advance `main` afterward |
-| Stars / forks | 64 stars / 4 forks |
+| Audited product commit | `64afd5cdda74967e807076d447fbf3ef2e26654a`; release hardening and documentation-only evidence updates may advance `main` afterward |
+| Stars / forks | 70 stars / 4 forks |
 | Issues | 6 closed / 0 open; all six were opened by `kkx94` |
-| Pull requests | 9 maintainer PRs merged; 4 superseded Dependabot PRs closed; 0 external human PRs |
-| Contributors API | 1 contributor returned (`kkx94`, 35 contributions) |
-| Releases | 3; latest is `v0.3.0`, published 2026-08-11 03:24:02 UTC |
-| CI for the audited product commit | Run [`31528357742`](https://github.com/kkx94/oss-init/actions/runs/31528357742) completed successfully for `9431e4f`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, the end-to-end Node.js/Python demo, the repository-local GitHub Action, and aggregate `CI` |
+| Pull requests | 11 maintainer PRs merged; 4 superseded Dependabot PRs closed; 0 external human PRs |
+| Contributors API | 1 contributor returned (`kkx94`, 39 contributions) |
+| Releases | 4; latest is [`v0.4.0`](https://github.com/kkx94/oss-init/releases/tag/v0.4.0), published 2026-08-11 21:38:36 UTC |
+| CI for the audited product commit | Run [`31537272077`](https://github.com/kkx94/oss-init/actions/runs/31537272077) completed successfully for `64afd5c`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, the end-to-end Node.js/Python demo, the repository-local GitHub Action, and aggregate `CI` |
 | Branch protection | Strict required check `CI`; administrator enforcement and conversation resolution enabled; force pushes and branch deletion disabled |
-| npm package | No public package version has been verified. The last completed registry check on 2026-08-11 returned `E404`; two refresh attempts on 2026-08-12 timed out and are not treated as publication evidence |
+| npm package | [`@kkx94/oss-init@0.4.0`](https://www.npmjs.com/package/@kkx94/oss-init/v/0.4.0) is public and tagged `latest`; registry metadata exposes an npm attestation with SLSA provenance v1 |
 
 These values are time-sensitive and must be refreshed immediately before the application.
 
 ### Current product readiness facts
 
-The v0.3.1 code and documentation were merged through PR [#7](https://github.com/kkx94/oss-init/pull/7). Current Action majors were then aligned across parent and generated workflows through PR [#12](https://github.com/kkx94/oss-init/pull/12). A reproducible product demo, Chinese project documentation, and adoption-report entry point were merged through PR [#14](https://github.com/kkx94/oss-init/pull/14). A zero-dependency repository-hygiene GitHub Action was merged through PR [#17](https://github.com/kkx94/oss-init/pull/17). Safe custom template overlays and portable update snapshots were merged through PR [#19](https://github.com/kkx94/oss-init/pull/19), closing Issue [#3](https://github.com/kkx94/oss-init/issues/3). All five product PRs and their post-merge `main` CI runs succeeded. The package is still a release candidate until npm publication and public acceptance complete.
+The v0.3.1 code and documentation were merged through PR [#7](https://github.com/kkx94/oss-init/pull/7). Current Action majors were then aligned across parent and generated workflows through PR [#12](https://github.com/kkx94/oss-init/pull/12). A reproducible product demo, Chinese project documentation, and adoption-report entry point were merged through PR [#14](https://github.com/kkx94/oss-init/pull/14). A zero-dependency repository-hygiene GitHub Action was merged through PR [#17](https://github.com/kkx94/oss-init/pull/17). Safe custom template overlays and portable update snapshots were merged through PR [#19](https://github.com/kkx94/oss-init/pull/19), closing Issue [#3](https://github.com/kkx94/oss-init/issues/3). PR [#21](https://github.com/kkx94/oss-init/pull/21) then released these additions as v0.4.0 after its pull-request and post-merge `main` CI runs succeeded.
+
+Release workflow run [`31537685762`](https://github.com/kkx94/oss-init/actions/runs/31537685762/attempts/2) published v0.4.0 with provenance successfully, but its two-minute registry read-back window expired before npm's first-package metadata became publicly visible, so the run correctly withheld the GitHub Release. After the public registry returned v0.4.0, a clean-directory `npx` acceptance check returned `0.4.0`; only then was the GitHub Release created from the already verified tag. The follow-up hardening increases the bounded registry window to five minutes for parent and generated Node.js workflows.
 
 | Verification | Result |
 |---|---|
@@ -36,6 +38,9 @@ The v0.3.1 code and documentation were merged through PR [#7](https://github.com
 | Repository-local GitHub Action | GitHub-hosted `node24` runner executed `uses: ./`, returned score 100, and passed success/failure/input-boundary regression tests |
 | `node scripts/verify-release.js v0.4.0` | Verified `@kkx94/oss-init@0.4.0` |
 | `npm pack --dry-run --json` | Passed; 44 package entries, limited to package metadata, bilingual project READMEs, LICENSE, CLI, source, and templates |
+| Public npm registry | Returned `@kkx94/oss-init@0.4.0`; package access status is `public` and `latest` resolves to `0.4.0` |
+| npm provenance | `dist.attestations` exposes an attestation URL with predicate type `https://slsa.dev/provenance/v1` |
+| Clean `npx` acceptance | `npx --yes --package @kkx94/oss-init@0.4.0 oss-init --version` returned `0.4.0` from a new temporary directory |
 | `git diff --check` | Passed |
 
 The code now on `main` adds or verifies:
@@ -63,10 +68,10 @@ The code now on `main` adds or verifies:
 - The public README now provides a reproducible product demo, and the same flow is continuously checked in CI.
 - Public repositories can preview the read-only audit through a documented GitHub Action; the README recommends full-SHA pinning until an action-bearing release is tagged.
 - Organizations can overlay and safely refresh their own templates without forking the built-in baseline or persisting local template paths.
+- The scoped package is installable from the public npm registry, and v0.4.0 carries npm provenance tied to the GitHub Actions source build.
 
 ## Claims that are not yet supportable
 
-- Do not claim that `@kkx94/oss-init` is installable from npm until registry read-back and clean-directory `npx` execution succeed publicly.
 - Do not claim external adoption without a verifiable downstream repository, package usage, maintainer statement, or other public evidence.
 - Do not claim external contributors or community pull requests; none were visible at snapshot time.
 - Do not treat the four forks as adoption evidence without verifying independent downstream use.
@@ -82,8 +87,8 @@ The [official Program Terms](https://learn.chatgpt.com/docs/codex-for-oss-terms)
 Current fit, separating evidence from inference:
 
 - **Strong evidence:** the repository is public; `kkx94` owns and actively administers it; protected merges and successful CI are visible.
-- **Moderate evidence:** 64 stars and 4 forks show early attention, and the project has working releases and issue history.
-- **Weak evidence:** the repository is less than two days old, npm publication is not verified, and there are no external human issues or pull requests.
+- **Moderate evidence:** 70 stars and 4 forks show early attention, and the project has a public npm release with provenance plus working GitHub releases and issue history.
+- **Weak evidence:** the repository is less than two days old, and there are no external human issues or pull requests.
 - **Unknown:** OpenAI's current Program capacity, comparative applicant pool, account verification, and any local restrictions.
 
 ## Required evidence before applying
@@ -92,9 +97,9 @@ Current fit, separating evidence from inference:
 2. [x] Harden branch protection and read the settings back through the GitHub API.
 3. [x] Add a public, CI-verified Node.js/Python product demo, bilingual project documentation, a GitHub Action adoption path, and a structured intake path for verifiable downstream use.
 4. [x] Close Issue #3 with CI-verified custom template overlays and portable update snapshots.
-5. [ ] Publish `@kkx94/oss-init@0.4.0` through the repository release workflow with provenance.
-6. [ ] Verify the public npm registry response and execute the exact version with `npx` in a clean directory before the GitHub Release is created.
-7. [ ] Confirm the versioned installation and GitHub Action instructions against the public package and release after publication.
+5. [x] Publish `@kkx94/oss-init@0.4.0` through the repository release workflow with provenance.
+6. [x] Verify the public npm registry response and execute the exact version with `npx` in a clean directory before the GitHub Release is created.
+7. [x] Confirm the versioned installation and GitHub Action instructions against the public package and release after publication.
 8. [ ] Collect genuine adoption evidence. Prefer public downstream repositories, unsolicited issues, external pull requests, or maintainer-confirmed use; never fabricate `ADOPTERS.md` entries.
 9. [ ] Continue shipping useful, scoped changes through late August and early September so the application shows sustained maintenance rather than a one-day repository burst.
 10. [ ] Refresh stars, forks, issues, pull requests, contributors, releases, npm status, branch protection, and CI on the application date.

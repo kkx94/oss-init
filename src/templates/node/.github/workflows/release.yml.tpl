@@ -37,7 +37,7 @@ jobs:
           PACKAGE_NAME: "{{packageName}}"
         run: |
           expected="${GITHUB_REF_NAME#v}"
-          for attempt in {1..12}; do
+          for attempt in {1..30}; do
             actual="$(npm view "$PACKAGE_NAME@$expected" version --registry=https://registry.npmjs.org/ 2>/dev/null || true)"
             if [ "$actual" = "$expected" ]; then
               exit 0
