@@ -1,0 +1,25 @@
+name: oss-init repository hygiene
+description: Audit an open source repository and enforce a configurable hygiene score in CI
+author: kkx94
+
+inputs:
+  path:
+    description: Repository path to audit, relative to the GitHub workspace
+    required: false
+    default: .
+  fail-below:
+    description: Fail the action when the score is below this integer from 0 to 100
+    required: false
+    default: "80"
+
+outputs:
+  score:
+    description: The repository hygiene score from 0 to 100
+
+runs:
+  using: node24
+  main: src/action.js
+
+branding:
+  icon: check-circle
+  color: green

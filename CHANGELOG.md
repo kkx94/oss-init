@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a zero-dependency GitHub Action that audits checked-out repositories, enforces a configurable score threshold, publishes a `score` output, and writes a detailed job summary.
 - Added a reproducible end-to-end demo that scaffolds, tests, audits, and previews updates for temporary Node.js and Python projects; parent CI runs it on every change.
 - Added a structured adoption-report issue template for public downstream projects.
 - Added Chinese project documentation and clearer entry points for users and first-time contributors.
