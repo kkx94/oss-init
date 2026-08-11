@@ -4,7 +4,7 @@ This file records evidence for a planned application around 2026-09-10. It separ
 
 ## Snapshot
 
-Evidence checked on 2026-08-11 at approximately 18:50 (Asia/Shanghai).
+Evidence checked on 2026-08-11 at approximately 19:50 (Asia/Shanghai).
 
 ### Public repository facts
 
@@ -12,13 +12,13 @@ Evidence checked on 2026-08-11 at approximately 18:50 (Asia/Shanghai).
 |---|---|
 | Repository | [`kkx94/oss-init`](https://github.com/kkx94/oss-init), public and not archived |
 | Created | 2026-08-10 08:02:49 UTC |
-| Public `main` commit | `53505757bbc4bde5191a2e380a81097b16ad7f20` |
+| Public `main` commit | `e8d5cad37185cb4ec2e284bde6a29acfacaa6a6f` |
 | Stars / forks | 58 stars / 3 forks |
 | Issues | 5 closed / 1 open; all six were opened by `kkx94` |
-| Pull requests | 2 maintainer PRs merged; 4 superseded Dependabot PRs closed; 0 external human PRs |
-| Contributors API | 1 contributor returned (`kkx94`, 9 contributions) |
+| Pull requests | 4 maintainer PRs merged; 4 superseded Dependabot PRs closed; 0 external human PRs |
+| Contributors API | 1 contributor returned (`kkx94`, 25 contributions) |
 | Releases | 3; latest is `v0.3.0`, published 2026-08-11 03:24:02 UTC |
-| Latest public `main` CI | Run `31483752471` completed successfully for `5350575`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, and aggregate `CI` |
+| Latest public `main` CI | Run `31488285469` completed successfully for `e8d5cad`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, the end-to-end Node.js/Python demo, and aggregate `CI` |
 | Branch protection | Strict required check `CI`; administrator enforcement and conversation resolution enabled; force pushes and branch deletion disabled |
 | npm package | `npm view @kkx94/oss-init version --json` returned registry `E404`; no public package version was verified |
 
@@ -26,14 +26,15 @@ These values are time-sensitive and must be refreshed immediately before the app
 
 ### v0.3.1 readiness facts
 
-The v0.3.1 code and documentation were merged through PR [#7](https://github.com/kkx94/oss-init/pull/7). Current Action majors were then aligned across parent and generated workflows through PR [#12](https://github.com/kkx94/oss-init/pull/12). Both PR checks and both post-merge `main` CI runs succeeded. The package is still a release candidate until npm publication and public acceptance complete.
+The v0.3.1 code and documentation were merged through PR [#7](https://github.com/kkx94/oss-init/pull/7). Current Action majors were then aligned across parent and generated workflows through PR [#12](https://github.com/kkx94/oss-init/pull/12). A reproducible product demo, Chinese project documentation, and adoption-report entry point were merged through PR [#14](https://github.com/kkx94/oss-init/pull/14). All three PRs and their post-merge `main` CI runs succeeded. The package is still a release candidate until npm publication and public acceptance complete.
 
 | Verification | Result |
 |---|---|
-| `npm test` | 86 tests passed, 0 failed |
+| `npm test` | 90 tests passed, 0 failed |
 | `npm run lint` | Passed all configured Node.js syntax checks |
+| `npm run demo` | Passed real Node.js and Python scaffold, generated-test, 100/100 audit, and safe-update-preview flows using temporary files |
 | `node scripts/verify-release.js v0.3.1` | Verified `@kkx94/oss-init@0.3.1` |
-| `npm pack --dry-run --json` | Passed; 42 package entries, limited to package metadata, README, LICENSE, CLI, source, and templates |
+| `npm pack --dry-run --json` | Passed; 43 package entries, limited to package metadata, bilingual project READMEs, LICENSE, CLI, source, and templates |
 | `git diff --check` | Passed |
 
 The code now on `main` adds or verifies:
@@ -45,7 +46,10 @@ The code now on `main` adds or verifies:
 - language-appropriate Node.js and Python documentation and workflows;
 - Linux and Windows CI with a stable aggregate check named `CI`;
 - current Node.js 24-based GitHub Action major versions in parent and generated workflows (`checkout`, `setup-node`, and `setup-python` v7; `action-gh-release` v3);
-- release verification before npm publication and GitHub Release creation.
+- release verification before npm publication and GitHub Release creation;
+- a network-free end-to-end demo enforced by parent CI for both generated ecosystems;
+- Chinese project documentation plus Chinese-aware README section and substance checks;
+- a structured public adoption-report form whose submissions require a public downstream repository and explicit listing permission.
 
 ## Claims that are currently supportable
 
@@ -53,6 +57,7 @@ The code now on `main` adds or verifies:
 - The project has automated tests for its core generation, audit, update, manifest, path-safety, identity, rendering, and release-verification behavior.
 - The current public repository has visible releases, successful CI, issues, stars, and forks.
 - The v0.3.1 code on `main` materially improves safety, cross-platform testing, documentation accuracy, and release integrity.
+- The public README now provides a reproducible product demo, and the same flow is continuously checked in CI.
 
 ## Claims that are not yet supportable
 
@@ -80,12 +85,13 @@ Current fit, separating evidence from inference:
 
 1. [x] Merge v0.3.1 readiness changes through protected `main` and record the merged commit plus successful required checks.
 2. [x] Harden branch protection and read the settings back through the GitHub API.
-3. [ ] Publish `@kkx94/oss-init@0.3.1` through the repository release workflow with provenance.
-4. [ ] Verify the public npm registry response and execute the exact version with `npx` in a clean directory before the GitHub Release is created.
-5. [ ] Replace the temporary npm status notice in `README.md` with verified installation instructions after publication.
-6. [ ] Collect genuine adoption evidence. Prefer public downstream repositories, unsolicited issues, external pull requests, or maintainer-confirmed use; never fabricate `ADOPTERS.md` entries.
-7. [ ] Continue shipping useful, scoped changes through late August and early September so the application shows sustained maintenance rather than a one-day repository burst.
-8. [ ] Refresh stars, forks, issues, pull requests, contributors, releases, npm status, branch protection, and CI on the application date.
+3. [x] Add a public, CI-verified Node.js/Python product demo, bilingual project documentation, and a structured intake path for verifiable adoption.
+4. [ ] Publish `@kkx94/oss-init@0.3.1` through the repository release workflow with provenance.
+5. [ ] Verify the public npm registry response and execute the exact version with `npx` in a clean directory before the GitHub Release is created.
+6. [ ] Replace the temporary npm status notice in `README.md` with verified installation instructions after publication.
+7. [ ] Collect genuine adoption evidence. Prefer public downstream repositories, unsolicited issues, external pull requests, or maintainer-confirmed use; never fabricate `ADOPTERS.md` entries.
+8. [ ] Continue shipping useful, scoped changes through late August and early September so the application shows sustained maintenance rather than a one-day repository burst.
+9. [ ] Refresh stars, forks, issues, pull requests, contributors, releases, npm status, branch protection, and CI on the application date.
 
 ## Reproduction commands
 
@@ -93,6 +99,8 @@ Current fit, separating evidence from inference:
 # Local candidate
 npm test
 npm run lint
+npm run demo
+node bin/oss-init.js check --json
 node scripts/verify-release.js v0.3.1
 npm pack --dry-run --json
 git diff --check
