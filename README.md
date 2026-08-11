@@ -213,7 +213,7 @@ node bin/oss-init.js check
 npm pack --dry-run --json
 ```
 
-The parent repository tests Node.js 22, 24, and 26 on Linux and Node.js 24 on Windows. Releases verify the tag against `package.json`, run tests and package inspection, publish with npm provenance, wait for public registry visibility, and exercise `npx` in a clean directory before creating the GitHub Release.
+The parent repository tests Node.js 22, 24, and 26 on Linux and Node.js 24 on Windows. Releases authenticate to npm through GitHub OIDC Trusted Publishing (no repository npm token), verify the tag against `package.json`, run tests and package inspection, publish with npm provenance, wait for public registry visibility, and exercise `npx` in a clean directory before creating the GitHub Release.
 
 ## Documentation
 
