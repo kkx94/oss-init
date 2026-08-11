@@ -34,7 +34,7 @@ The v0.3.1 code and documentation were merged through PR [#7](https://github.com
 | `npm run lint` | Passed all configured Node.js syntax checks |
 | `npm run demo` | Passed real Node.js and Python scaffold, generated-test, 100/100 audit, and safe-update-preview flows using temporary files |
 | Repository-local GitHub Action | GitHub-hosted `node24` runner executed `uses: ./`, returned score 100, and passed success/failure/input-boundary regression tests |
-| `node scripts/verify-release.js v0.3.1` | Verified `@kkx94/oss-init@0.3.1` |
+| `node scripts/verify-release.js v0.4.0` | Verified `@kkx94/oss-init@0.4.0` |
 | `npm pack --dry-run --json` | Passed; 44 package entries, limited to package metadata, bilingual project READMEs, LICENSE, CLI, source, and templates |
 | `git diff --check` | Passed |
 
@@ -92,9 +92,9 @@ Current fit, separating evidence from inference:
 2. [x] Harden branch protection and read the settings back through the GitHub API.
 3. [x] Add a public, CI-verified Node.js/Python product demo, bilingual project documentation, a GitHub Action adoption path, and a structured intake path for verifiable downstream use.
 4. [x] Close Issue #3 with CI-verified custom template overlays and portable update snapshots.
-5. [ ] Publish `@kkx94/oss-init@0.3.1` through the repository release workflow with provenance.
+5. [ ] Publish `@kkx94/oss-init@0.4.0` through the repository release workflow with provenance.
 6. [ ] Verify the public npm registry response and execute the exact version with `npx` in a clean directory before the GitHub Release is created.
-7. [ ] Replace the temporary npm status notice in `README.md` with verified installation instructions after publication.
+7. [ ] Confirm the versioned installation and GitHub Action instructions against the public package and release after publication.
 8. [ ] Collect genuine adoption evidence. Prefer public downstream repositories, unsolicited issues, external pull requests, or maintainer-confirmed use; never fabricate `ADOPTERS.md` entries.
 9. [ ] Continue shipping useful, scoped changes through late August and early September so the application shows sustained maintenance rather than a one-day repository burst.
 10. [ ] Refresh stars, forks, issues, pull requests, contributors, releases, npm status, branch protection, and CI on the application date.
@@ -108,7 +108,7 @@ npm run lint
 npm run demo
 node bin/oss-init.js check --json
 node src/action.js
-node scripts/verify-release.js v0.3.1
+node scripts/verify-release.js v0.4.0
 npm pack --dry-run --json
 git diff --check
 
