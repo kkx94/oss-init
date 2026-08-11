@@ -5,6 +5,7 @@
 [简体中文](README.zh-CN.md) | [English](README.md)
 
 [![CI](https://github.com/kkx94/oss-init/actions/workflows/ci.yml/badge.svg)](https://github.com/kkx94/oss-init/actions/workflows/ci.yml)
+[![npm 版本](https://img.shields.io/npm/v/%40kkx94%2Foss-init)](https://www.npmjs.com/package/@kkx94/oss-init)
 ![零运行时依赖](https://img.shields.io/badge/runtime_dependencies-0-brightgreen)
 ![许可证](https://img.shields.io/github/license/kkx94/oss-init)
 [![Node 版本](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
@@ -17,18 +18,9 @@
 
 该 CLI 没有运行时依赖，也不需要构建步骤，支持 Node.js 22 及更高版本。仓库还提供一个零依赖 GitHub Action，可在 CI 中强制执行卫生检查。
 
-## 安装与项目状态
+## 安装
 
-作用域包 `@kkx94/oss-init` 尚未在公开 npm registry 发布。v0.3.1 正在准备首次可验证的 npm 发布。在 npm 包页可访问之前，请从源码仓库运行：
-
-```bash
-git clone https://github.com/kkx94/oss-init.git
-cd oss-init
-npm test
-node bin/oss-init.js --help
-```
-
-发布后将支持：
+从公开 npm registry 安装或运行作用域包：
 
 ```bash
 npx @kkx94/oss-init
@@ -185,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: oss-hygiene
-        uses: kkx94/oss-init@main
+        uses: kkx94/oss-init@v0.4.0
         with:
           fail-below: "80"
       - run: echo "Hygiene score ${{ steps.oss-hygiene.outputs.score }}/100"
@@ -193,7 +185,7 @@ jobs:
 
 `path` 默认为仓库根目录，并且必须位于 checkout 工作区之内。`fail-below` 接受 0 至 100 的整数，默认为 80。
 
-在首个包含该 Action 的版本打 tag 之前，`@main` 只是预览通道。如果需要固定供应链输入，请绑定完整 commit SHA，并有意识地更新该 SHA。
+上面的版本标签选择 v0.4.0 release。如果需要不可变的供应链输入，请绑定该 release 的完整 commit SHA，并有意识地更新该 SHA。
 
 ## 示例
 

@@ -5,6 +5,7 @@ Scaffold, audit, and safely refresh bilingual Node.js and Python open source rep
 English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/kkx94/oss-init/actions/workflows/ci.yml/badge.svg)](https://github.com/kkx94/oss-init/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/%40kkx94%2Foss-init)](https://www.npmjs.com/package/@kkx94/oss-init)
 ![Zero runtime dependencies](https://img.shields.io/badge/runtime_dependencies-0-brightgreen)
 ![License](https://img.shields.io/github/license/kkx94/oss-init)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
@@ -17,18 +18,9 @@ English | [简体中文](README.zh-CN.md)
 
 The CLI has no runtime dependencies and no build step. It supports Node.js 22 and newer. The repository also ships a zero-dependency GitHub Action for enforcing the audit in CI.
 
-## Installation status
+## Installation
 
-The scoped package `@kkx94/oss-init` is not yet available from the public npm registry. Version 0.3.1 is being prepared for its first verified npm publication. Until the npm package page resolves, run the CLI from a source checkout:
-
-```bash
-git clone https://github.com/kkx94/oss-init.git
-cd oss-init
-npm test
-node bin/oss-init.js --help
-```
-
-After publication, these commands will be supported:
+Install or run the scoped package from the public npm registry:
 
 ```bash
 npx @kkx94/oss-init
@@ -185,7 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: oss-hygiene
-        uses: kkx94/oss-init@main
+        uses: kkx94/oss-init@v0.4.0
         with:
           fail-below: "80"
       - run: echo "Hygiene score ${{ steps.oss-hygiene.outputs.score }}/100"
@@ -193,7 +185,7 @@ jobs:
 
 `path` defaults to the repository root and must remain inside the checked-out workspace. `fail-below` accepts an integer from 0 to 100 and defaults to 80.
 
-Until the first action-bearing release is tagged, `@main` is a preview channel. For a fixed supply-chain input, pin the action to a full commit SHA and update that SHA intentionally.
+The version tag above selects the v0.4.0 release. For an immutable supply-chain input, pin the action to the release's full commit SHA and update that SHA intentionally.
 
 ## Examples
 
