@@ -12,13 +12,13 @@ Evidence checked on 2026-08-11 at approximately 19:50 (Asia/Shanghai).
 |---|---|
 | Repository | [`kkx94/oss-init`](https://github.com/kkx94/oss-init), public and not archived |
 | Created | 2026-08-10 08:02:49 UTC |
-| Public `main` commit | `e8d5cad37185cb4ec2e284bde6a29acfacaa6a6f` |
+| Audited product commit | `e8d5cad37185cb4ec2e284bde6a29acfacaa6a6f`; documentation-only evidence updates may advance `main` afterward |
 | Stars / forks | 58 stars / 3 forks |
 | Issues | 5 closed / 1 open; all six were opened by `kkx94` |
 | Pull requests | 4 maintainer PRs merged; 4 superseded Dependabot PRs closed; 0 external human PRs |
 | Contributors API | 1 contributor returned (`kkx94`, 25 contributions) |
 | Releases | 3; latest is `v0.3.0`, published 2026-08-11 03:24:02 UTC |
-| Latest public `main` CI | Run `31488285469` completed successfully for `e8d5cad`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, the end-to-end Node.js/Python demo, and aggregate `CI` |
+| CI for the audited product commit | Run `31488285469` completed successfully for `e8d5cad`, including Node.js 22/24/26 on Linux, Node.js 24 on Windows, package inspection, the end-to-end Node.js/Python demo, and aggregate `CI` |
 | Branch protection | Strict required check `CI`; administrator enforcement and conversation resolution enabled; force pushes and branch deletion disabled |
 | npm package | `npm view @kkx94/oss-init version --json` returned registry `E404`; no public package version was verified |
 
