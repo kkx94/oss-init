@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-10
+
+### Changed
+
+- **Package renamed to `@kkx94/oss-init` on npm.** The plain `oss-init` name on npm belongs to another maintainer; install with `npm install -g @kkx94/oss-init` or `npx @kkx94/oss-init`. The CLI command is still `oss-init`.
+
+### Fixed
+
+- `oss-init update` no longer deletes retired files the user has modified. Retired files are now subject to the same hash-based protection as updated files: if the on-disk content differs from the manifest hash, the file is preserved unless `--force` is given.
+- `oss-init update` now rejects manifest paths that escape the target directory (`../`, absolute paths, drive roots) and reports them instead of touching files outside the repo.
+- `--github` now runs `git init`, `git add -A`, and the first commit before `gh repo create --source . --push`, so a single command can take an empty directory to a pushed GitHub repository.
+- Hardened `--dry-run`: no `.oss-init.json` manifest is written in dry-run mode.
+
+### Added
+
+- Branch protection guidance and a self-update acceptance test.
+- `oss-init update` path escape regression tests.
+
 ## [0.2.0] - 2026-08-10
 
 ### Added
@@ -19,19 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AGENTS.md` generation (on by default; opt out with `--no-agents`) — gives AI coding agents working on the new repo clear conventions.
 - Non-empty directory handling now lists the files that would be overwritten before requiring `--force`.
 - Path placeholders in template trees (e.g. `src/{{nameSnake}}/`) are now substituted, enabling language templates with dynamic package directories.
-- Self-audit: `oss-init check` scores this repository at 100/100.
 
 ### Changed
 
-- CLI restructured around subcommands (`init`, `check`); bare `oss-init [dir]` still defaults to `init`.
+- CLI restructured around subcommands (`init`, `check`, `update`); bare `oss-init [dir]` still defaults to `init`.
 - `--no-<bool>` negation syntax supported for boolean flags.
 - `check --fix` auto-detects the project language from `pyproject.toml` vs `package.json`.
-- README rewritten with maintainer statement, full command reference, and check preview.
-
-### Changed
-
-- CLI restructured around subcommands (`init`, `check`); bare `oss-init [dir]` still defaults to `init`.
-- `--no-<bool>` negation syntax supported for boolean flags.
 - README rewritten with maintainer statement, full command reference, and check preview.
 
 ## [0.1.0] - 2026-08-10

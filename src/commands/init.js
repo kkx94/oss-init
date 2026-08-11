@@ -90,6 +90,23 @@ function hasGh() {
   return out.status === 0;
 }
 
+function gitInitAndCommit(targetDir) {
+  spawnSync('git', ['init'], { cwd: targetDir, stdio: 'ignore', shell: true });
+  spawnSync('git', ['add', '-A'], { cwd: targetDir, stdio: 'ignore', shell: true });
+  const msg = 'Initial commit (scaffolded with oss-init)';
+  const committed = spawnSync('git', ['commit', '-m', msg], {
+    cwd: targetDir,
+    stdio: 'ignore',
+    shell: true,
+  });
+  if (committed.status === 0) {
+    process.stdout.write(`\nInitialized git repo and made the first commit.\n`);
+    return true;
+  }
+  process.stderr.write('\ngit commit failed — check your git user.name / user.email configuration.\n');
+  return false;
+}
+
 export function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
 }
@@ -251,12 +268,16 @@ export async function runInit(argv, { version }) {
 
   writeManifest(targetDir, result.filesWritten, values, opts);
 
+  const didGitInit = (opts.git || opts.github) && whichGit()
+    ? gitInitAndCommit(targetDir)
+    : false;
+
   if (opts.github) {
     if (!hasGh()) {
       process.stderr.write('\n--github requested but "gh" CLI was not found. Skipping GitHub creation; files and git commit still done.\n');
-      opts.git = true;
+    } else if (!didGitInit) {
+      process.stderr.write('\n--github requested but git init/commit failed (check git user.name / user.email). Cannot push to GitHub.\n');
     } else {
-      opts.git = true;
       const ghUser = gitConfig('user.name') || '';
       const suggestedRepo = ghUser ? `${ghUser}/${name}` : name;
       const r = spawnSync('gh', ['repo', 'create', name, '--public', '--source', '.', '--push'], {
@@ -273,24 +294,8 @@ export async function runInit(argv, { version }) {
     }
   }
 
-  if (opts.git && !opts.github) {
-    if (!whichGit()) {
-      process.stderr.write('\n--git requested but git was not found. Skipping.\n');
-    } else {
-      spawnSync('git', ['init'], { cwd: targetDir, stdio: 'ignore', shell: true });
-      spawnSync('git', ['add', '-A'], { cwd: targetDir, stdio: 'ignore', shell: true });
-      const msg = 'Initial commit (scaffolded with oss-init)';
-      const committed = spawnSync('git', ['commit', '-m', msg], {
-        cwd: targetDir,
-        stdio: 'ignore',
-        shell: true,
-      });
-      if (committed.status === 0) {
-        process.stdout.write(`\nInitialized git repo and made the first commit.\n`);
-      } else {
-        process.stderr.write('\ngit commit failed — check your git user.name / user.email configuration.\n');
-      }
-    }
+  if (opts.git && !opts.github && !whichGit()) {
+    process.stderr.write('\n--git requested but git was not found. Skipping.\n');
   }
 
   if (!opts.git && !opts.github) {

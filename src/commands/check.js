@@ -12,13 +12,14 @@ const TEMPLATE_ROOT = join(__dirname, '..', 'templates');
 
 export function checkHelpText() {
   return [
-    'oss-init check - Audit a repository for open source best practices',
+    'oss-init check - Audit a repository for open source hygiene',
     '',
     'Usage:',
     '  oss-init check [target-dir] [options]',
     '',
     'Scores the repository against 17 rules covering community files,',
-    'documentation quality, and CI configuration. Reports a 0-100 score',
+    'documentation quality, and CI configuration. Reports a 0-100 hygiene',
+    'score (file presence and basic quality, not project importance)',
     'and per-rule results.',
     '',
     'Options:',
@@ -157,7 +158,7 @@ export function runCheck(argv, { version }) {
   for (const r of results) {
     process.stdout.write(`  ${g(r.status)}  ${r.name}${color ? `${DIM}  [${r.id}]${RESET}` : `  [${r.id}]`}\n`);
   }
-  const summary = `\nScore: ${s} / 100  ${s >= 80 ? 'healthy' : s >= 50 ? 'needs work' : 'critical gaps'}\n`;
+  const summary = `\nHygiene score: ${s} / 100  ${s >= 80 ? 'healthy' : s >= 50 ? 'needs work' : 'critical gaps'}\n`;
   process.stdout.write(summary);
 
   const failed = results.filter((r) => r.status === 'fail');

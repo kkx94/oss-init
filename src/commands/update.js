@@ -60,6 +60,21 @@ export function readManifest(targetDir) {
   }
 }
 
+export function isSafeRelative(rel) {
+  if (typeof rel !== 'string' || rel === '') return false;
+  if (/^[a-zA-Z]:[\\/]/.test(rel) || rel.startsWith('/') || rel.startsWith('\\')) return false;
+  if (rel.includes('\0')) return false;
+  const norm = rel.replace(/\\/g, '/');
+  const parts = norm.split('/');
+  let depth = 0;
+  for (const p of parts) {
+    if (p === '..') depth -= 1;
+    else if (p !== '' && p !== '.') depth += 1;
+    if (depth < 0) return false;
+  }
+  return true;
+}
+
 export function runUpdate(argv, { version }) {
   const { options, positionals, errors } = parseArgs(argv, UPDATE_FLAGS);
 
@@ -114,6 +129,10 @@ export function runUpdate(argv, { version }) {
   const added = [];
 
   for (const rel of rendered.filesWritten) {
+    if (!isSafeRelative(rel)) {
+      rejectedPaths.push(rel);
+      continue;
+    }
     const newContent = readFileSync(join(tmpDir, rel), 'utf8');
     const newHash = sha256(newContent);
     const manifestHash = manifest.files[rel];
@@ -150,17 +169,32 @@ export function runUpdate(argv, { version }) {
   }
 
   const removed = [];
+  const skippedRetiredModified = [];
+  const rejectedPaths = [];
   for (const rel of Object.keys(manifest.files || {})) {
     if (!rendered.filesWritten.includes(rel)) {
+      if (!isSafeRelative(rel)) {
+        rejectedPaths.push(rel);
+        continue;
+      }
       const currentPath = join(targetDir, rel);
-      if (existsSync(currentPath)) {
-        removed.push(rel);
-        if (!options['dry-run']) {
-          try {
-            unlinkSync(currentPath);
-          } catch {
-            // ignore
-          }
+      if (!existsSync(currentPath)) continue;
+
+      const manifestHash = manifest.files[rel];
+      const currentHash = sha256(readFileSync(currentPath, 'utf8'));
+      const userModified = manifestHash && currentHash !== manifestHash;
+
+      if (userModified && !options.force) {
+        skippedRetiredModified.push(rel);
+        continue;
+      }
+
+      removed.push(rel);
+      if (!options['dry-run']) {
+        try {
+          unlinkSync(currentPath);
+        } catch {
+          // ignore
         }
       }
     }
@@ -193,6 +227,15 @@ export function runUpdate(argv, { version }) {
   if (removed.length > 0) {
     process.stdout.write(`\n${options['dry-run'] ? 'Would remove' : 'Removed'} ${removed.length} file(s) no longer in the template:\n`);
     for (const rel of removed) process.stdout.write(`  - ${rel}\n`);
+  }
+  if (skippedRetiredModified.length > 0) {
+    process.stdout.write(`\nSkipped ${skippedRetiredModified.length} retired file(s) you have modified (use --force to remove):\n`);
+    for (const rel of skippedRetiredModified) process.stdout.write(`  ! ${rel}\n`);
+  }
+  if (rejectedPaths.length > 0) {
+    process.stderr.write(`\nRejected ${rejectedPaths.length} manifest path(s) that escape the target directory:\n`);
+    for (const rel of rejectedPaths) process.stderr.write(`  x ${rel}\n`);
+    return 1;
   }
   if (skippedUserModified.length > 0) {
     process.stdout.write(`\nSkipped ${skippedUserModified.length} file(s) you have modified (use --force to overwrite):\n`);

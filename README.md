@@ -1,22 +1,23 @@
 # oss-init
 
-Scaffold and health-check production-grade open source repositories.
+Scaffold, audit, and refresh open source repositories.
 
 [![CI](https://github.com/kkx94/oss-init/actions/workflows/ci.yml/badge.svg)](https://github.com/kkx94/oss-init/actions/workflows/ci.yml)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![License](https://img.shields.io/github/license/kkx94/oss-init)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 
-`oss-init` does two things:
+`oss-init` does three things:
 
 1. **Scaffolds** a complete, production-ready repository skeleton in one command — bilingual README, LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, AGENTS.md, `.gitignore`, GitHub Actions CI/CD, issue/PR templates. Real content, not empty boilerplate.
-2. **Audits** any existing repository against 17 open source best-practice rules and prints a 0-100 health score, with an optional `--fix` that patches missing community files in place.
+2. **Audits** any existing repository against 17 open source best-practice rules and prints a 0-100 *hygiene* score, with an optional `--fix` that patches missing community files in place. The score measures file presence and basic documentation quality, not project importance or installability.
+3. **Refreshes** previously scaffolded files in place with `oss-init update`, preserving files you have edited (unless you pass `--force`).
 
 **Zero dependencies.** No build step. Works with Node.js >= 18.
 
 ## Why this project exists
 
-Setting up a new open source repository is repetitive and error-prone — most people copy-paste incomplete templates, forget `SECURITY.md`, write weak CONTRIBUTING, or skip CI/CD. `oss-init` eliminates that busywork and gives maintainers a clean, production-grade starting point in seconds, plus an ongoing audit so the repo doesn't drift.
+Setting up a new open source repository is repetitive and error-prone — most people copy-paste incomplete templates, forget `SECURITY.md`, write weak CONTRIBUTING, or skip CI/CD. `oss-init` eliminates that busywork and gives maintainers a clean, reproducible starting point in seconds, plus an ongoing audit so the repo doesn't drift. It's aimed at maintainers of small-to-medium open source projects, and ships English + Chinese READMEs out of the box.
 
 I am the **sole core maintainer** with write access to this repository. The project is actively maintained and will keep improving with community feedback.
 
@@ -25,19 +26,19 @@ Unlike other scaffolding tools:
 - **Zero dependencies** — no supply chain risk, no install weight
 - **Real content** — every generated file is complete and usable as-is
 - **Bilingual support** — English and Chinese README out of the box
-- **Production-grade defaults** — CI matrix, release automation, security policy included
-- **Self-auditing** — `oss-init check` scores this very repository at **100/100**
+- **Reproducible defaults** — CI matrix, release automation, security policy, branch tax included
+- **Refreshable** — `oss-init update` re-syncs templates while preserving your edits
 
 ## Installation
 
 ```bash
-npx oss-init
+npx @kkx94/oss-init
 ```
 
 or install globally:
 
 ```bash
-npm install -g oss-init
+npm install -g @kkx94/oss-init
 ```
 
 ## Usage

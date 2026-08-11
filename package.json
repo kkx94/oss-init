@@ -1,7 +1,7 @@
 {
-  "name": "oss-init",
-  "version": "0.2.0",
-  "description": "Scaffold a production-grade open source repository with professional README, LICENSE, CONTRIBUTING, SECURITY and GitHub Actions workflows �?in one command. Zero dependencies.",
+  "name": "@kkx94/oss-init",
+  "version": "0.3.0",
+  "description": "Scaffold, audit, and refresh production-grade open source repositories. Bilingual README, LICENSE, community files, CI/CD, and a health checker. Zero dependencies.",
   "type": "module",
   "bin": {
     "oss-init": "bin/oss-init.js"
@@ -32,7 +32,14 @@
     "type": "git",
     "url": "git+https://github.com/kkx94/oss-init.git"
   },
-  "author": "",
+  "homepage": "https://github.com/kkx94/oss-init#readme",
+  "bugs": {
+    "url": "https://github.com/kkx94/oss-init/issues"
+  },
+  "author": "kkx94",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {},
   "devDependencies": {}
 }

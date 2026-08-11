@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { sha256 } from '../src/commands/init.js';
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'oss-init.js');
 
@@ -242,7 +244,7 @@ test('check command scores the repo and prints the score', () => {
   try {
     runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
     const out = runCli(['check', dir]);
-    assert.match(out, /Score:\s+\d+\s*\/\s*100/);
+    assert.match(out, /Hygiene score:\s+\d+\s*\/\s*100/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -369,6 +371,97 @@ test('update --dry-run previews without writing', () => {
     runCli(['update', dir, '--dry-run', '--force']);
     const after = readFileSync(join(dir, 'LICENSE'), 'utf8');
     assert.equal(after, before, 'dry-run should not change files');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update preserves user-modified retired files without --force', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const path = 'bench/no-longer-generated.txt';
+    mkdirSync(join(dir, 'bench'), { recursive: true });
+    writeFileSync(join(dir, path), 'manual retired file\n');
+    manifest.files[path] = sha256('manual retired file\n');
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    writeFileSync(join(dir, path), 'user edited the retired file\n');
+    const out = runCli(['update', dir]);
+    assert.match(out, /retired file\(s\) you have modified/);
+    assert.ok(existsSync(join(dir, path)), 'retired file should be preserved without --force');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update --force removes user-modified retired files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const path = 'old/retired.txt';
+    const content = 'retired content\n';
+    mkdirSync(join(dir, 'old'), { recursive: true });
+    writeFileSync(join(dir, path), content);
+    manifest.files[path] = sha256(content);
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    writeFileSync(join(dir, path), 'user changed it\n');
+    runCli(['update', dir, '--force']);
+    assert.equal(existsSync(join(dir, path)), false, '--force should remove retired file even if user modified');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update rejects manifest paths that escape the target directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const sneaky = '../escape.txt';
+    const sneakyAbs = resolve(join(dir, sneaky));
+    manifest.files[sneaky] = 'whatever';
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    assert.throws(
+      () => runCli(['update', dir]),
+      (err) => {
+        assert.match(err.stderr, /escape the target directory/);
+        assert.match(err.stderr, /\.\.\/escape\.txt/);
+        return true;
+      },
+    );
+    assert.equal(existsSync(sneakyAbs), false, 'no file outside the repo should be touched');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update handles a corrupted manifest by treating it as missing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    writeFileSync(join(dir, 'README.md'), '# not related\n');
+    writeFileSync(join(dir, '.oss-init.json'), '{ this is not valid json }}}');
+    assert.throws(
+      () => runCli(['update', dir]),
+      (err) => {
+        assert.match(err.stderr, /No \.oss-init\.json found/);
+        return true;
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('--dry-run does not write the manifest', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en', '--dry-run']);
+    assert.equal(existsSync(join(dir, '.oss-init.json')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
