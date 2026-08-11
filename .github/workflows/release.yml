@@ -52,6 +52,6 @@ jobs:
           echo "Published package did not pass public registry and clean npx verification."
           exit 1
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
