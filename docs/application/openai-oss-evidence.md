@@ -45,6 +45,7 @@ The release candidate adds or verifies:
 - fail-closed manifest validation, path containment, atomic writes, cleanup, and preservation of user-edited files;
 - language-appropriate Node.js and Python documentation and workflows;
 - Linux and Windows CI with a stable aggregate check named `CI`;
+- current Node.js 24-based GitHub Action major versions in parent and generated workflows;
 - release verification before npm publication and GitHub Release creation.
 
 ## Claims that are currently supportable

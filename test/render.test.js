@@ -296,8 +296,13 @@ test('generated Node workflows use maintained runtimes and fail closed', () => {
     assert.match(ci, /node-version: \[22\.x, 24\.x\]/);
     assert.match(ci, /windows-latest/);
     assert.match(ci, /name: CI/);
+    assert.match(ci, /actions\/checkout@v5/);
+    assert.match(ci, /actions\/setup-node@v5/);
     assert.match(release, /npm publish --access public --provenance/);
     assert.match(release, /npm view/);
+    assert.match(release, /actions\/checkout@v5/);
+    assert.match(release, /actions\/setup-node@v5/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout|setup-node)@v4/);
     assert.doesNotMatch(release, /if:\s*env\.NODE_AUTH_TOKEN\s*!=/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -330,6 +335,7 @@ test('generated Python metadata, docs, and CI use Python identities', () => {
     const pyproject = readFileSync(join(dir, 'pyproject.toml'), 'utf8');
     const readme = readFileSync(join(dir, 'README.md'), 'utf8');
     const ci = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8');
+    const release = readFileSync(join(dir, '.github', 'workflows', 'release.yml'), 'utf8');
     assert.match(pyproject, /name = "my\.cool-lib"/);
     assert.match(pyproject, /packages = \["src\/my_cool_lib"\]/);
     assert.match(pyproject, /github\.com\/demo-user\/my\.cool-lib/);
@@ -338,6 +344,11 @@ test('generated Python metadata, docs, and CI use Python identities', () => {
     assert.doesNotMatch(readme, /Node\.js/);
     assert.match(ci, /windows-latest/);
     assert.match(ci, /name: CI/);
+    assert.match(ci, /actions\/checkout@v5/);
+    assert.match(ci, /actions\/setup-python@v6/);
+    assert.match(release, /actions\/checkout@v5/);
+    assert.match(release, /actions\/setup-python@v6/);
+    assert.doesNotMatch(`${ci}\n${release}`, /actions\/(?:checkout@v4|setup-python@v5)/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
