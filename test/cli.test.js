@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { sha256 } from '../src/commands/init.js';
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'oss-init.js');
+const PACKAGE_VERSION = JSON.parse(readFileSync(join(dirname(BIN), '..', 'package.json'), 'utf8')).version;
 
 function cleanEnv() {
   const env = { ...process.env };
@@ -355,6 +356,8 @@ test('update writes a .oss-init.json manifest on init', () => {
     runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
     assert.ok(existsSync(join(dir, '.oss-init.json')), 'manifest should exist');
     const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'));
+    assert.equal(manifest.schemaVersion, 1);
+    assert.equal(manifest.generatorVersion, PACKAGE_VERSION);
     assert.equal(manifest.values.name, 'demo-app');
     assert.equal(manifest.options.lang, 'node');
     assert.ok(Object.keys(manifest.files).length > 10);
@@ -497,7 +500,7 @@ test('update rejects manifest paths that escape the target directory', () => {
   }
 });
 
-test('update handles a corrupted manifest by treating it as missing', () => {
+test('update reports corrupted manifest JSON without rendering', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-'));
   try {
     writeFileSync(join(dir, 'README.md'), '# not related\n');
@@ -505,12 +508,72 @@ test('update handles a corrupted manifest by treating it as missing', () => {
     assert.throws(
       () => runCli(['update', dir]),
       (err) => {
-        assert.match(err.stderr, /No \.oss-init\.json found/);
+        assert.match(err.stderr, /Invalid \.oss-init\.json/);
         return true;
       },
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update validates manifest structure before mutating target files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-schema-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const readmeBefore = readFileSync(join(dir, 'README.md'), 'utf8');
+    manifest.files = [];
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    assert.throws(
+      () => runCli(['update', dir, '--force']),
+      (err) => {
+        assert.match(err.stderr, /files must be an object/);
+        return true;
+      },
+    );
+    assert.equal(readFileSync(join(dir, 'README.md'), 'utf8'), readmeBefore);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update rewrites the manifest with the installed generator version', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-version-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.generatorVersion = '0.2.0';
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    runCli(['update', dir]);
+    const rewritten = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    assert.equal(rewritten.schemaVersion, 1);
+    assert.equal(rewritten.generatorVersion, PACKAGE_VERSION);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('update removes its temporary directory after a filesystem failure', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-update-cleanup-'));
+  const controlledTemp = mkdtempSync(join(tmpdir(), 'oss-init-update-tmp-root-'));
+  try {
+    runCli([dir, '--name', 'demo-app', '--docs', 'en']);
+    const manifestPath = join(dir, '.oss-init.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    mkdirSync(join(dir, 'retired-directory'));
+    manifest.files['retired-directory'] = 'a'.repeat(64);
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+    assert.throws(() => runCli(['update', dir], {
+      env: { ...cleanEnv(), TEMP: controlledTemp, TMP: controlledTemp },
+    }));
+    assert.deepEqual(readdirSync(controlledTemp), []);
+    assert.ok(existsSync(join(dir, 'retired-directory')));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(controlledTemp, { recursive: true, force: true });
   }
 });
 

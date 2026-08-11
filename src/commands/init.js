@@ -1,11 +1,11 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import readline from 'node:readline/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseArgs, INIT_FLAG_DEFS } from '../args.js';
+import { createManifest, resolveContainedPath, sha256, writeManifestAtomic } from '../manifest.js';
 import { deriveProjectIdentity, resolveGithubMetadata } from '../project-identity.js';
 import { defaultNameFor, dirExists, dirIsEmpty, isWritable, validateName } from '../validate.js';
 import { promptForConflictOverwrite, promptForOptions } from '../prompts.js';
@@ -118,13 +118,20 @@ function gitInitAndCommit(targetDir) {
   return false;
 }
 
-export function sha256(content) {
-  return createHash('sha256').update(content).digest('hex');
-}
+export { sha256 };
 
-export function writeManifest(targetDir, filesWritten, values, opts) {
-  const manifest = {
-    version: '0.2.0',
+export function writeManifest(targetDir, filesWritten, values, opts, generatorVersion) {
+  const files = {};
+  for (const rel of filesWritten) {
+    try {
+      const content = readFileSync(resolveContainedPath(targetDir, rel), 'utf8');
+      files[rel] = sha256(content);
+    } catch {
+      // file wasn't written (dry run) — skip
+    }
+  }
+  const manifest = createManifest({
+    generatorVersion,
     values,
     options: {
       lang: opts.lang,
@@ -134,19 +141,9 @@ export function writeManifest(targetDir, filesWritten, values, opts) {
       publish: opts.publish,
       agents: opts.agents,
     },
-    files: {},
-  };
-  for (const rel of filesWritten) {
-    try {
-      const content = readFileSync(join(targetDir, rel), 'utf8');
-      manifest.files[rel] = sha256(content);
-    } catch {
-      // file wasn't written (dry run) — skip
-    }
-  }
-  const manifestPath = join(targetDir, '.oss-init.json');
-  mkdirSync(join(manifestPath, '..'), { recursive: true });
-  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', { mode: 0o644 });
+    files,
+  });
+  writeManifestAtomic(targetDir, manifest);
 }
 
 export async function runInit(argv, { version }) {
@@ -285,7 +282,7 @@ export async function runInit(argv, { version }) {
     return 0;
   }
 
-  writeManifest(targetDir, result.filesWritten, values, opts);
+  writeManifest(targetDir, result.filesWritten, values, opts, version);
 
   const didGitInit = (opts.git || opts.github) && whichGit()
     ? gitInitAndCommit(targetDir)

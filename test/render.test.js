@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { basename, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { render } from '../src/render.js';
@@ -212,5 +212,29 @@ test('python template renders with snake_case package paths', () => {
     assert.doesNotMatch(pyproject, /\{\{/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('render refuses a placeholder-derived destination outside the target directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-render-safe-'));
+  const escapedName = `oss-init-escaped-${basename(dir)}`;
+  const escaped = join(dirname(dir), escapedName);
+  try {
+    assert.throws(
+      () => render({
+        templateRoot: TEMPLATE_ROOT,
+        targetDir: dir,
+        values: { ...BASE_VALUES, nameSnake: `../../${escapedName}` },
+        docs: 'en',
+        ci: false,
+        publish: false,
+        lang: 'python',
+      }),
+      /safe relative path|outside target directory/,
+    );
+    assert.equal(existsSync(escaped), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(escaped, { recursive: true, force: true });
   }
 });
