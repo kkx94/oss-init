@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `oss-init adopt` for bringing existing Node.js and PEP 621 Python repositories into the maintenance lifecycle. It detects project metadata, adds only missing maintenance files, supports a fully read-only `--dry-run`, and never generates or overwrites existing package metadata, source, or tests.
+- Added manifest schema v3 with explicit managed and protected path ownership so future updates can add new maintenance files without taking ownership of paths that existed before adoption.
+
 ### Changed
 
+- Made adopted CI repository-aware and fail-closed: Node.js workflows infer npm, pnpm, or Yarn commands and optional lint scripts, while Python workflows require a recognizable pytest or unittest setup. `adopt --publish` is rejected without writes because existing release automation cannot be inferred safely.
 - Extended the bounded post-publish npm registry verification window from two to five minutes in the parent and generated Node.js release workflows, covering slower first-package metadata propagation without republishing.
 - Migrated the parent release workflow from a repository npm token to npm Trusted Publishing through GitHub Actions OIDC; generated projects retain their explicit first-publish credential gate.
+- Preserved tracking for user-modified retired files across repeated update runs instead of dropping their manifest hashes after the first skipped removal.
 
 ## [0.4.0] - 2026-08-12
 

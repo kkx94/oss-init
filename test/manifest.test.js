@@ -40,6 +40,9 @@ const VALUES = {
   usageExample: "import { add } from './src/index.js';\n\nconsole.log(add(1, 2));",
   ciBadge: '![CI](https://github.com/demo-user/demo-app/actions/workflows/ci.yml/badge.svg)',
   ciSummary: 'GitHub Actions CI included',
+  ciInstallCommand: 'npm install',
+  ciTestCommand: 'npm test',
+  ciLintStep: '      - run: npm run lint',
 };
 
 const OPTIONS = {
@@ -58,6 +61,8 @@ function validManifest(overrides = {}) {
     values: VALUES,
     options: OPTIONS,
     files: { 'README.md': HASH },
+    managedPaths: ['README.md'],
+    protectedPaths: [],
     ...overrides,
   };
 }
@@ -134,19 +139,19 @@ test('rejects unsafe relative paths and path-derived identity values', () => {
   assert.match(unsafeIdentity.errors.join('\n'), /values\.pythonImport/);
 });
 
-test('uses schema 2 and the supplied installed generator version when constructing a manifest', () => {
+test('uses schema 3 and the supplied installed generator version when constructing a manifest', () => {
   const manifest = createManifest({
     generatorVersion: '0.3.1',
     values: VALUES,
     options: OPTIONS,
     files: { 'README.md': HASH },
   });
-  assert.equal(manifest.schemaVersion, 2);
+  assert.equal(manifest.schemaVersion, 3);
   assert.equal(manifest.generatorVersion, '0.3.1');
   assert.equal('version' in manifest, false);
 });
 
-test('schema 2 validates and preserves portable custom template snapshots', () => {
+test('schema 3 validates and preserves portable custom template snapshots', () => {
   const customTemplates = {
     'common/NOTICE.md.tpl': 'Copyright {{year}} {{author}}\n',
     'node/docs/runtime.md.tpl': '# {{projectName}} runtime\n',
@@ -170,13 +175,25 @@ test('rejects unsafe or non-text custom template snapshots', () => {
     {},
   ]) {
     const result = parseAndValidateManifest(validManifest({
-      schemaVersion: 2,
       customTemplates,
     }));
     assert.equal(result.ok, false);
     assert.match(result.errors.join('\n'), /customTemplates/);
   }
 });
+
+test('schema 3 validates managed and protected path ownership', () => {
+  for (const manifest of [
+    validManifest({ protectedPaths: ['README.md'] }),
+    validManifest({ managedPaths: ['README.md', 'README.md'] }),
+    validManifest({ protectedPaths: ['../escape.txt'] }),
+    validManifest({ managedPaths: [] }),
+  ]) {
+    const result = parseAndValidateManifest(manifest)
+    assert.equal(result.ok, false)
+    assert.match(result.errors.join('\n'), /managedPaths|protectedPaths/)
+  }
+})
 
 test('resolveContainedPath accepts descendants and rejects cross-platform escapes', () => {
   const root = mkdtempSync(join(tmpdir(), 'oss-init-contained-'));

@@ -1,7 +1,7 @@
 {
   "name": "@kkx94/oss-init",
   "version": "0.4.0",
-  "description": "Scaffold, audit, and safely refresh bilingual Node and Python open-source repositories. Zero runtime dependencies.",
+  "description": "Scaffold, adopt, audit, and safely refresh Node.js and Python open-source repositories. Zero runtime dependencies.",
   "type": "module",
   "bin": {
     "oss-init": "bin/oss-init.js"
@@ -16,7 +16,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "lint": "node --check bin/oss-init.js && node --check src/cli.js && node --check src/action.js && node --check src/args.js && node --check src/validate.js && node --check src/project-identity.js && node --check src/manifest.js && node --check src/prompts.js && node --check src/render.js && node --check src/checks.js && node --check src/commands/init.js && node --check src/commands/check.js && node --check src/commands/update.js && node --check scripts/demo.js && node --check scripts/verify-release.js && node --check test/action.test.js && node --check test/checks.test.js",
+    "lint": "node --check bin/oss-init.js && node --check src/cli.js && node --check src/action.js && node --check src/args.js && node --check src/validate.js && node --check src/project-identity.js && node --check src/adopt-metadata.js && node --check src/manifest.js && node --check src/prompts.js && node --check src/render.js && node --check src/checks.js && node --check src/commands/init.js && node --check src/commands/adopt.js && node --check src/commands/check.js && node --check src/commands/update.js && node --check scripts/demo.js && node --check scripts/verify-release.js && node --check test/action.test.js && node --check test/adopt-metadata.test.js && node --check test/checks.test.js",
     "demo": "node scripts/demo.js"
   },
   "keywords": [

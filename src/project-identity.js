@@ -181,6 +181,9 @@ export function deriveTemplateValues(identity, lang, { ci = false, githubUser = 
       testCommand: 'npm test',
       codeFenceLanguage: 'js',
       usageExample: "import { add } from './src/index.js';\n\nconsole.log(add(1, 2));",
+      ciInstallCommand: 'npm install',
+      ciTestCommand: 'npm test',
+      ciLintStep: '      - run: npm run lint',
     };
   }
   if (lang === 'python') {
@@ -192,6 +195,9 @@ export function deriveTemplateValues(identity, lang, { ci = false, githubUser = 
       testCommand: 'python -m unittest discover -s tests',
       codeFenceLanguage: 'python',
       usageExample: `from ${identity.pythonImport} import add\n\nprint(add(1, 2))`,
+      ciInstallCommand: 'python -m pip install -e ".[dev]"',
+      ciTestCommand: 'python -m unittest discover -s tests',
+      ciLintStep: '',
     };
   }
   throw new Error(`Unsupported project language: ${lang}`);

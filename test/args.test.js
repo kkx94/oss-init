@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS } from '../src/args.js';
+import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS, ADOPT_FLAG_DEFS } from '../src/args.js';
 import { initHelpText } from '../src/commands/init.js';
+import { adoptHelpText } from '../src/commands/adopt.js';
 import { checkHelpText } from '../src/commands/check.js';
 
 test('parses value flags with separate value', () => {
@@ -91,6 +92,24 @@ test('parses check flags against CHECK_FLAG_DEFS', () => {
 test('rejects init-only flag in check context', () => {
   const { errors } = parseArgs(['--ci'], CHECK_FLAG_DEFS);
   assert.ok(errors.some((e) => e.includes('Unknown option: --ci')));
+});
+
+test('parses adopt flags without silently defaulting the project language or license', () => {
+  const result = parseArgs(['--ci', '--docs', 'zh', 'some-repo'], ADOPT_FLAG_DEFS);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.options.lang, null);
+  assert.equal(result.options.license, null);
+  assert.equal(result.options.ci, true);
+  assert.equal(result.options.docs, 'zh');
+  assert.deepEqual(result.positionals, ['some-repo']);
+});
+
+test('adopt help text states the non-overwrite and dry-run guarantees', () => {
+  const text = adoptHelpText();
+  assert.match(text, /never overwritten/);
+  assert.match(text, /--dry-run/);
+  assert.match(text, /--lang/);
+  assert.match(text, /--publish flag exits without changing/);
 });
 
 test('init help text mentions key flags', () => {

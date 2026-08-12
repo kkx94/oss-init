@@ -6,7 +6,7 @@ Guidance for AI coding agents working on **oss-init**.
 
 ## Project overview
 
-oss-init is a zero-runtime-dependency Node.js CLI. It scaffolds a documented Node.js or Python open source repository baseline, audits repository hygiene with `oss-init check`, and safely refreshes generated files with `oss-init update`.
+oss-init is a zero-runtime-dependency Node.js CLI. It scaffolds a documented Node.js or Python open source repository baseline, safely adopts existing repositories without overwriting user files, audits repository hygiene with `oss-init check`, and refreshes managed files with `oss-init update`.
 
 ## Languages and runtime
 

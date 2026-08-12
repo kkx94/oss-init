@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { runInit, initHelpText } from './commands/init.js';
 import { runCheck, checkHelpText } from './commands/check.js';
 import { runUpdate, updateHelpText } from './commands/update.js';
-import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS } from './args.js';
+import { runAdopt, adoptHelpText } from './commands/adopt.js';
+import { parseArgs, INIT_FLAG_DEFS, CHECK_FLAG_DEFS, ADOPT_FLAG_DEFS } from './args.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -18,7 +19,7 @@ function readVersion() {
   }
 }
 
-const COMMANDS = new Set(['init', 'check', 'update']);
+const COMMANDS = new Set(['init', 'adopt', 'check', 'update']);
 
 function globalHelp() {
   return [
@@ -27,6 +28,7 @@ function globalHelp() {
     'Usage:',
     '  oss-init [target-dir] [options]         Scaffold a new repository (default command)',
     '  oss-init init [target-dir] [options]     Scaffold a new repository',
+    '  oss-init adopt [target-dir] [options]    Safely add missing files to an existing repo',
     '  oss-init check [target-dir] [options]    Audit a repository for OSS best practices',
     '  oss-init update [target-dir] [options]   Refresh files in a previously scaffolded repo',
     '',
@@ -34,7 +36,7 @@ function globalHelp() {
     '  --help, -h     Show this help message (use with a command for command-specific help)',
     '  --version, -v  Show version',
     '',
-    'Run "oss-init init --help", "oss-init check --help", or "oss-init update --help" for details.',
+    'Run "oss-init <command> --help" for command-specific details.',
   ].join('\n');
 }
 
@@ -96,6 +98,24 @@ export async function main(argv) {
       return 0;
     }
     return runCheck(rest, { version });
+  }
+
+  if (command === 'adopt') {
+    const parsed = parseArgs(rest, ADOPT_FLAG_DEFS);
+    if (parsed.errors.length > 0) {
+      process.stderr.write(`${parsed.errors.join('\n')}\n\n`);
+      process.stderr.write(`${adoptHelpText()}\n`);
+      return 1;
+    }
+    if (parsed.options.help) {
+      process.stdout.write(`${adoptHelpText()}\n`);
+      return 0;
+    }
+    if (parsed.options.version) {
+      process.stdout.write(`${version}\n`);
+      return 0;
+    }
+    return runAdopt(rest, { version });
   }
 
   if (command === 'update') {

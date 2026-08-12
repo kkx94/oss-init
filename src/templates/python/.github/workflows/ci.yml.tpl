@@ -20,8 +20,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -e ".[dev]"
-      - run: python -m unittest discover -s tests
+      - run: {{ciInstallCommand}}
+      - run: {{ciTestCommand}}
+{{ciLintStep}}
 
   windows:
     runs-on: windows-latest
@@ -30,8 +31,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - run: python -m pip install -e ".[dev]"
-      - run: python -m unittest discover -s tests
+      - run: {{ciInstallCommand}}
+      - run: {{ciTestCommand}}
+{{ciLintStep}}
 
   CI:
     name: CI

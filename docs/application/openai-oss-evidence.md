@@ -48,7 +48,7 @@ The code now on `main` adds or verifies:
 
 - safe identity derivation for scoped Node.js packages and Python distributions/imports;
 - separation of GitHub login from LICENSE and commit author identity;
-- manifest schema version 2 with schema v1 and legacy v0.2.x/v0.3.0 compatibility;
+- manifest schema version 3 with explicit managed/protected path ownership, while retaining schema v1/v2 and legacy v0.2.x-v0.4.x compatibility;
 - fail-closed manifest validation, lexical and symbolic-link path containment, atomic writes, cleanup, and preservation of user-edited files;
 - language-appropriate Node.js and Python documentation and workflows;
 - Linux and Windows CI with a stable aggregate check named `CI`;
@@ -59,6 +59,7 @@ The code now on `main` adds or verifies:
 - a structured public adoption-report form whose submissions require a public downstream repository and explicit listing permission;
 - a zero-dependency GitHub Action with a configurable failure threshold, score output, job summary, workspace containment, and a required repository-local integration job in parent CI.
 - `--template <dir>` overlays for organization-specific common and Node.js/Python files, with preflight token validation, bounded UTF-8 snapshots, reserved-path protection, and portable safe updates that do not store machine-specific source paths.
+- an unreleased `adopt` workflow for adding only missing maintenance files to existing Node.js and PEP 621 Python repositories, with permanent ownership boundaries, read-only previews, repository-aware CI command inference, and fail-closed handling for ambiguous CI or release automation.
 
 ## Claims that are currently supportable
 

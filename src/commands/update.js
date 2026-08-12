@@ -152,6 +152,8 @@ export function runUpdate(argv, { version }) {
       publish: templateOptions.publish,
       agents: templateOptions.agents,
       lang: templateOptions.lang,
+      mode: templateOptions.mode ?? 'init',
+      skipLicense: templateOptions.mode === 'adopt' && !manifest.managedPaths?.includes('LICENSE'),
       dryRun: false,
     });
     if (rendered.errors.length > 0) {
@@ -168,14 +170,24 @@ export function runUpdate(argv, { version }) {
     const writes = [];
     const removals = [];
     const generatedHashes = {};
-    const renderedSet = new Set(rendered.filesWritten);
+    const protectedPaths = [...(manifest.protectedPaths ?? [])];
+    const protectedSet = new Set(protectedPaths);
+    const renderedSet = new Set(rendered.filesWritten.filter((rel) => !protectedSet.has(rel)));
 
-    for (const rel of rendered.filesWritten) {
+    for (const rel of renderedSet) {
       const newContent = readFileSync(resolveContainedPath(tmpDir, rel), 'utf8');
       const newHash = sha256(newContent);
-      generatedHashes[rel] = newHash;
       const manifestHash = manifest.files[rel];
       const currentPath = resolveContainedPath(targetDir, rel);
+
+      if (templateOptions.mode === 'adopt' && manifestHash === undefined && existsSync(currentPath)) {
+        protectedSet.add(rel);
+        protectedPaths.push(rel);
+        skippedUserModified.push(rel);
+        continue;
+      }
+
+      generatedHashes[rel] = newHash;
 
       if (!existsSync(currentPath)) {
         added.push(rel);
@@ -206,6 +218,7 @@ export function runUpdate(argv, { version }) {
       const currentHash = sha256(readFileSync(currentPath, 'utf8'));
       if (currentHash !== manifestHash && !commandOptions.force) {
         skippedRetiredModified.push(rel);
+        generatedHashes[rel] = manifestHash;
         continue;
       }
       removed.push(rel);
@@ -218,6 +231,8 @@ export function runUpdate(argv, { version }) {
       options: templateOptions,
       files: generatedHashes,
       customTemplates: manifest.customTemplates,
+      managedPaths: Object.keys(generatedHashes),
+      protectedPaths,
     });
 
     if (!commandOptions['dry-run']) {

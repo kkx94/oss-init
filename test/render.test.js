@@ -297,6 +297,29 @@ test('rendered text contains no stale claims or encoding corruption', () => {
   }
 });
 
+test('adopt mode uses neutral maintenance templates without starter claims', () => {
+  const { dir, result } = renderToTemp({}, {
+    docs: 'en',
+    ci: false,
+    publish: false,
+    mode: 'adopt',
+  });
+  try {
+    assert.deepEqual(result.errors, []);
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+    const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf8');
+    const changelog = readFileSync(join(dir, 'CHANGELOG.md'), 'utf8');
+    assert.match(readme, /repository did not already contain one/);
+    assert.match(agents, /existed before oss-init adoption/);
+    assert.match(changelog, /Added repository maintenance files/);
+    assert.doesNotMatch(`${readme}\n${agents}\n${changelog}`, /starter code|No runtime dependencies|Initial repository foundation/);
+    assert.equal(existsSync(join(dir, 'src', 'index.js')), false);
+    assert.equal(existsSync(join(dir, 'test', 'index.test.js')), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('generated Node workflows use maintained runtimes and fail closed', () => {
   const { dir } = renderToTemp();
   try {

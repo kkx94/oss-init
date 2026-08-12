@@ -145,6 +145,8 @@ export function writeManifest(targetDir, filesWritten, values, opts, generatorVe
     },
     files,
     customTemplates,
+    managedPaths: filesWritten,
+    protectedPaths: [],
   });
   writeManifestAtomic(targetDir, manifest);
 }

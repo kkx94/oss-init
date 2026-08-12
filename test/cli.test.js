@@ -323,6 +323,223 @@ test('--init subcommand works the same as default', () => {
   }
 });
 
+test('adopt adds only missing maintenance files and preserves an existing Node project', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-node-'))
+  try {
+    const packageText = JSON.stringify({
+      name: '@acme/existing-app',
+      version: '8.2.0',
+      description: 'A real existing application',
+      author: 'Existing Maintainer <maintainer@example.test>',
+      license: 'MIT',
+      repository: 'https://github.com/acme/existing-app',
+      scripts: { test: 'node --test' },
+    }, null, 2) + '\n'
+    const readme = '# Existing application\n\nKeep this user-authored documentation exactly.\n'
+    writeFileSync(join(dir, 'package.json'), packageText)
+    writeFileSync(join(dir, 'README.md'), readme)
+
+    const out = runCli(['adopt', dir, '--ci'])
+    assert.match(out, /Adopted .* with \d+ new managed file/)
+    assert.equal(readFileSync(join(dir, 'package.json'), 'utf8'), packageText)
+    assert.equal(readFileSync(join(dir, 'README.md'), 'utf8'), readme)
+    assert.ok(existsSync(join(dir, '.github', 'workflows', 'ci.yml')))
+    const workflow = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8')
+    assert.match(workflow, /- run: npm install/)
+    assert.match(workflow, /- run: npm test/)
+    assert.doesNotMatch(workflow, /npm run lint/)
+    assert.equal(existsSync(join(dir, 'src', 'index.js')), false)
+    assert.equal(existsSync(join(dir, 'test', 'index.test.js')), false)
+
+    const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'))
+    assert.equal(manifest.schemaVersion, 3)
+    assert.equal(manifest.options.mode, 'adopt')
+    assert.equal(manifest.values.name, '@acme/existing-app')
+    assert.equal(manifest.values.githubUser, 'acme')
+    assert.equal(manifest.values.author, 'Existing Maintainer')
+    assert.equal(manifest.managedPaths.includes('package.json'), false)
+    assert.equal(manifest.managedPaths.includes('README.md'), false)
+    assert.equal(manifest.protectedPaths.includes('README.md'), true)
+    assert.deepEqual(Object.keys(manifest.files).sort(), [...manifest.managedPaths].sort())
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt --ci fails closed when the existing project has no confirmed test command', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-ci-fail-'))
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'existing-app', license: 'MIT' }) + '\n')
+    assert.throws(
+      () => runCli(['adopt', dir, '--ci']),
+      (error) => {
+        assert.match(error.stderr, /requires a non-empty "test" script/)
+        return true
+      },
+    )
+    assert.deepEqual(readdirSync(dir), ['package.json'])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt --publish is rejected before writing any files', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-publish-fail-'))
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'existing-app', license: 'MIT' }) + '\n')
+    assert.throws(
+      () => runCli(['adopt', dir, '--publish']),
+      (error) => {
+        assert.match(error.stderr, /Cannot adopt a release workflow safely/)
+        return true
+      },
+    )
+    assert.deepEqual(readdirSync(dir), ['package.json'])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt --dry-run is read-only and reports the planned additions', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-dry-'))
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'existing-app' }) + '\n')
+    const before = readdirSync(dir)
+    const out = runCli(['adopt', dir, '--license', 'mit', '--dry-run'])
+    assert.match(out, /Would adopt/)
+    assert.match(out, /dry run/)
+    assert.deepEqual(readdirSync(dir), before)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt supports an existing Python project without replacing pyproject.toml or source', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-python-'))
+  try {
+    const pyproject = [
+      '[project]',
+      'name = "existing-pkg"',
+      'description = "Existing Python project"',
+      'license = "Apache-2.0"',
+      'authors = [{ name = "Python Maintainer" }]',
+      '',
+    ].join('\n')
+    writeFileSync(join(dir, 'pyproject.toml'), pyproject)
+    mkdirSync(join(dir, 'src', 'custom_pkg'), { recursive: true })
+    const source = 'VALUE = 42\n'
+    writeFileSync(join(dir, 'src', 'custom_pkg', '__init__.py'), source)
+    writeFileSync(join(dir, 'LICENSE'), 'Apache License\nVersion 2.0, January 2004\n')
+
+    runCli(['adopt', dir, '--no-agents'])
+    assert.equal(readFileSync(join(dir, 'pyproject.toml'), 'utf8'), pyproject)
+    assert.equal(readFileSync(join(dir, 'src', 'custom_pkg', '__init__.py'), 'utf8'), source)
+    assert.equal(existsSync(join(dir, 'src', 'existing_pkg', '__init__.py')), false)
+    assert.equal(existsSync(join(dir, 'AGENTS.md')), false)
+    const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'))
+    assert.equal(manifest.options.lang, 'python')
+    assert.equal(manifest.managedPaths.includes('LICENSE'), false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt --ci derives pytest commands without overwriting an existing Python project', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-python-ci-'))
+  try {
+    const pyproject = [
+      '[project]',
+      'name = "existing-pkg"',
+      'license = "MIT"',
+      '',
+      '[project.optional-dependencies]',
+      'test = ["pytest>=8"]',
+      '',
+    ].join('\n')
+    writeFileSync(join(dir, 'pyproject.toml'), pyproject)
+    mkdirSync(join(dir, 'tests'))
+    writeFileSync(join(dir, 'tests', 'test_existing.py'), 'def test_existing():\n    assert True\n')
+
+    runCli(['adopt', dir, '--ci', '--no-agents'])
+    assert.equal(readFileSync(join(dir, 'pyproject.toml'), 'utf8'), pyproject)
+    assert.equal(readFileSync(join(dir, 'tests', 'test_existing.py'), 'utf8'), 'def test_existing():\n    assert True\n')
+    const workflow = readFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'utf8')
+    assert.match(workflow, /python -m pip install "\.\[test\]"/)
+    assert.match(workflow, /python -m pytest/)
+    assert.doesNotMatch(workflow, /unittest|\[dev\]/)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('adopt requires explicit language for mixed repositories and refuses a second adoption', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-mixed-'))
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'mixed-repo', license: 'MIT' }) + '\n')
+    writeFileSync(join(dir, 'pyproject.toml'), '[project]\nname = "mixed-repo"\nlicense = "MIT"\n')
+    assert.throws(
+      () => runCli(['adopt', dir]),
+      (error) => {
+        assert.match(error.stderr, /Both package.json and pyproject.toml/)
+        return true
+      },
+    )
+    runCli(['adopt', dir, '--lang', 'node'])
+    assert.throws(
+      () => runCli(['adopt', dir, '--lang', 'node']),
+      (error) => {
+        assert.match(error.stderr, /already contains \.oss-init\.json/)
+        return true
+      },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('update after adopt never starts managing pre-existing source or package metadata', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-update-'))
+  try {
+    const packageText = JSON.stringify({ name: 'existing-app', license: 'MIT' }, null, 2) + '\n'
+    writeFileSync(join(dir, 'package.json'), packageText)
+    runCli(['adopt', dir])
+    const before = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'))
+    runCli(['update', dir, '--force'])
+    const after = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'))
+    assert.equal(readFileSync(join(dir, 'package.json'), 'utf8'), packageText)
+    assert.equal(existsSync(join(dir, 'src', 'index.js')), false)
+    assert.equal(after.managedPaths.includes('package.json'), false)
+    assert.equal(after.managedPaths.includes('src/index.js'), false)
+    assert.deepEqual(after.managedPaths.sort(), before.managedPaths.sort())
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('update after adopt permanently protects later user-created template collisions', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oss-init-adopt-future-collision-'))
+  try {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'existing-app', license: 'MIT' }) + '\n')
+    runCli(['adopt', dir])
+    const manifestPath = join(dir, '.oss-init.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    const collision = '.gitattributes'
+    delete manifest.files[collision]
+    manifest.managedPaths = manifest.managedPaths.filter((path) => path !== collision)
+    manifest.protectedPaths = manifest.protectedPaths.filter((path) => path !== collision)
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
+    writeFileSync(join(dir, collision), 'user-created-after-adoption\n')
+
+    runCli(['update', dir, '--force'])
+    assert.equal(readFileSync(join(dir, collision), 'utf8'), 'user-created-after-adoption\n')
+    const updated = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    assert.equal(updated.protectedPaths.includes(collision), true)
+    assert.equal(updated.managedPaths.includes(collision), false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('check command scores the repo and prints the score', () => {
   const dir = mkdtempSync(join(tmpdir(), 'oss-init-e2e-'));
   try {
@@ -384,7 +601,7 @@ test('update writes a .oss-init.json manifest on init', () => {
     runCli([dir, '--name', 'demo-app', '--docs', 'en', '--ci']);
     assert.ok(existsSync(join(dir, '.oss-init.json')), 'manifest should exist');
     const manifest = JSON.parse(readFileSync(join(dir, '.oss-init.json'), 'utf8'));
-    assert.equal(manifest.schemaVersion, 2);
+    assert.equal(manifest.schemaVersion, 3);
     assert.equal(manifest.generatorVersion, PACKAGE_VERSION);
     assert.equal(manifest.values.name, 'demo-app');
     assert.equal(manifest.options.lang, 'node');
@@ -474,6 +691,7 @@ test('update preserves user-modified retired files without --force', () => {
     mkdirSync(join(dir, 'bench'), { recursive: true });
     writeFileSync(join(dir, path), 'manual retired file\n');
     manifest.files[path] = sha256('manual retired file\n');
+    manifest.managedPaths.push(path);
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
     writeFileSync(join(dir, path), 'user edited the retired file\n');
     const out = runCli(['update', dir]);
@@ -495,6 +713,7 @@ test('update --force removes user-modified retired files', () => {
     mkdirSync(join(dir, 'old'), { recursive: true });
     writeFileSync(join(dir, path), content);
     manifest.files[path] = sha256(content);
+    manifest.managedPaths.push(path);
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
     writeFileSync(join(dir, path), 'user changed it\n');
     runCli(['update', dir, '--force']);
@@ -575,10 +794,12 @@ test('update rewrites the manifest with the installed generator version', () => 
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     manifest.schemaVersion = 1;
     manifest.generatorVersion = '0.2.0';
+    delete manifest.managedPaths;
+    delete manifest.protectedPaths;
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
     runCli(['update', dir]);
     const rewritten = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    assert.equal(rewritten.schemaVersion, 2);
+    assert.equal(rewritten.schemaVersion, 3);
     assert.equal(rewritten.generatorVersion, PACKAGE_VERSION);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -594,6 +815,7 @@ test('update removes its temporary directory after a filesystem failure', () => 
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     mkdirSync(join(dir, 'retired-directory'));
     manifest.files['retired-directory'] = 'a'.repeat(64);
+    manifest.managedPaths.push('retired-directory');
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
     assert.throws(() => runCli(['update', dir], {
       env: { ...cleanEnv(), TEMP: controlledTemp, TMP: controlledTemp },
@@ -642,7 +864,7 @@ test('--template snapshots portable overrides and update reuses them safely', ()
     const manifestPath = join(dir, '.oss-init.json');
     const manifestText = readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(manifestText);
-    assert.equal(manifest.schemaVersion, 2);
+    assert.equal(manifest.schemaVersion, 3);
     assert.equal(manifest.customTemplates['node/NOTICE.md.tpl'], 'Owner: {{author}}\n');
     assert.equal(manifestText.includes(customRoot), false, 'manifest must not store the machine-specific template path');
 

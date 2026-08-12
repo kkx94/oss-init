@@ -4,12 +4,12 @@ import { isAbsolute, join, relative, resolve, win32 } from 'node:path';
 
 import { deriveProjectIdentity, deriveTemplateValues } from './project-identity.js';
 
-export const MANIFEST_SCHEMA_VERSION = 2;
+export const MANIFEST_SCHEMA_VERSION = 3;
 
 const LANGS = new Set(['node', 'python']);
 const LICENSES = new Set(['mit', 'apache-2.0']);
 const DOCS = new Set(['en', 'zh', 'bilingual']);
-const SUPPORTED_MANIFEST_SCHEMAS = new Set([1, MANIFEST_SCHEMA_VERSION]);
+const SUPPORTED_MANIFEST_SCHEMAS = new Set([1, 2, MANIFEST_SCHEMA_VERSION]);
 const CUSTOM_TEMPLATE_SECTIONS = new Set(['common', 'node', 'python']);
 const MAX_CUSTOM_TEMPLATE_FILES = 200;
 const MAX_CUSTOM_TEMPLATE_FILE_BYTES = 256 * 1024;
@@ -146,10 +146,18 @@ function validateOptions(options, errors) {
     return;
   }
   if (!LANGS.has(options.lang)) errors.push('options.lang must be "node" or "python".');
-  if (!LICENSES.has(options.license)) errors.push('options.license must be "mit" or "apache-2.0".');
+  const adoptLicense = options.mode === 'adopt'
+    && typeof options.license === 'string'
+    && /^[A-Za-z0-9][A-Za-z0-9.+-]*$/.test(options.license);
+  if (!LICENSES.has(options.license) && !adoptLicense) {
+    errors.push('options.license must be "mit" or "apache-2.0" (adopt may preserve an existing SPDX identifier).');
+  }
   if (!DOCS.has(options.docs)) errors.push('options.docs must be "en", "zh", or "bilingual".');
   for (const key of ['ci', 'publish', 'agents']) {
     if (typeof options[key] !== 'boolean') errors.push(`options.${key} must be a boolean.`);
+  }
+  if (options.mode !== undefined && options.mode !== 'adopt') {
+    errors.push('options.mode must be "adopt" when present.');
   }
 }
 
@@ -183,6 +191,14 @@ function validateValues(values, options, errors) {
     }
   }
   if (typeof values.ciBadge !== 'string') errors.push('values.ciBadge must be a string.');
+  for (const key of ['ciInstallCommand', 'ciTestCommand']) {
+    if (values[key] !== undefined && (typeof values[key] !== 'string' || values[key] === '')) {
+      errors.push(`values.${key} must be a non-empty string when present.`);
+    }
+  }
+  if (values.ciLintStep !== undefined && typeof values.ciLintStep !== 'string') {
+    errors.push('values.ciLintStep must be a string when present.');
+  }
   if (!isObject(options) || !LANGS.has(options.lang)) return;
 
   const sourceName = options.lang === 'node' ? values.packageName : values.pythonDistribution;
@@ -209,8 +225,21 @@ function validateValues(values, options, errors) {
       githubUser: values.githubUser,
     });
     for (const [key, expectedValue] of Object.entries(expectedTemplateValues)) {
+      if (options.mode === 'adopt' && ['ciInstallCommand', 'ciTestCommand', 'ciLintStep'].includes(key)) continue;
+      if (values[key] === undefined && ['ciInstallCommand', 'ciTestCommand', 'ciLintStep'].includes(key)) continue;
       if (values[key] !== expectedValue) {
         errors.push(`values.${key} does not match the derived template metadata.`);
+      }
+    }
+    if (options.mode === 'adopt') {
+      if (options.ci && (values.ciInstallCommand === undefined || values.ciTestCommand === undefined)) {
+        errors.push('adopt manifests with CI must store inferred install and test commands.');
+      }
+      if (/[\r\n]/.test(values.ciInstallCommand ?? '') || /[\r\n]/.test(values.ciTestCommand ?? '')) {
+        errors.push('adopt CI commands must each stay on one line.');
+      }
+      if (values.ciLintStep !== undefined && values.ciLintStep !== '' && !/^ {6}- run: (?:npm|pnpm|yarn) run lint$/.test(values.ciLintStep)) {
+        errors.push('values.ciLintStep is not a supported adopted lint step.');
       }
     }
   } catch (error) {
@@ -234,6 +263,56 @@ function validateFiles(files, errors) {
     if (typeof hash !== 'string' || !SHA256_RE.test(hash)) {
       errors.push(`files[${JSON.stringify(rel)}] must be a lowercase 64-character SHA-256 hash.`);
     }
+  }
+}
+
+function validateManagedPaths(managedPaths, files, schemaVersion, errors) {
+  if (schemaVersion < 3) {
+    if (managedPaths !== undefined) errors.push('managedPaths requires schemaVersion 3.');
+    return;
+  }
+  if (!Array.isArray(managedPaths)) {
+    errors.push('managedPaths must be an array of safe relative paths.');
+    return;
+  }
+  const seen = new Set();
+  for (const rel of managedPaths) {
+    if (!isSafeRelativePath(rel)) {
+      errors.push(`managedPaths contains an unsafe relative path: ${JSON.stringify(rel)}.`);
+      continue;
+    }
+    if (seen.has(rel)) errors.push(`managedPaths contains a duplicate path: ${JSON.stringify(rel)}.`);
+    seen.add(rel);
+  }
+  if (isObject(files)) {
+    for (const rel of Object.keys(files)) {
+      if (!seen.has(rel)) errors.push(`files[${JSON.stringify(rel)}] is not listed in managedPaths.`);
+    }
+    for (const rel of seen) {
+      if (!(rel in files)) errors.push(`managedPaths contains ${JSON.stringify(rel)}, but files has no hash for it.`);
+    }
+  }
+}
+
+function validateProtectedPaths(protectedPaths, managedPaths, schemaVersion, errors) {
+  if (schemaVersion < 3) {
+    if (protectedPaths !== undefined) errors.push('protectedPaths requires schemaVersion 3.');
+    return;
+  }
+  if (!Array.isArray(protectedPaths)) {
+    errors.push('protectedPaths must be an array of safe relative paths.');
+    return;
+  }
+  const managed = new Set(Array.isArray(managedPaths) ? managedPaths : []);
+  const seen = new Set();
+  for (const rel of protectedPaths) {
+    if (!isSafeRelativePath(rel)) {
+      errors.push(`protectedPaths contains an unsafe relative path: ${JSON.stringify(rel)}.`);
+      continue;
+    }
+    if (seen.has(rel)) errors.push(`protectedPaths contains a duplicate path: ${JSON.stringify(rel)}.`);
+    if (managed.has(rel)) errors.push(`protectedPaths and managedPaths both contain ${JSON.stringify(rel)}.`);
+    seen.add(rel);
   }
 }
 
@@ -262,15 +341,20 @@ export function parseAndValidateManifest(raw) {
   const errors = [];
   if (!SUPPORTED_MANIFEST_SCHEMAS.has(manifest.schemaVersion)) {
     errors.push(
-      `Unsupported manifest schemaVersion ${JSON.stringify(manifest.schemaVersion)}; expected 1 or ${MANIFEST_SCHEMA_VERSION}.`,
+      `Unsupported manifest schemaVersion ${JSON.stringify(manifest.schemaVersion)}; expected 1, 2, or ${MANIFEST_SCHEMA_VERSION}.`,
     );
   }
   if (typeof manifest.generatorVersion !== 'string' || !VERSION_RE.test(manifest.generatorVersion)) {
     errors.push('generatorVersion must be a semantic version such as "0.3.1".');
   }
   validateOptions(manifest.options, errors);
+  if (manifest.options?.mode === 'adopt' && manifest.schemaVersion !== MANIFEST_SCHEMA_VERSION) {
+    errors.push(`options.mode "adopt" requires schemaVersion ${MANIFEST_SCHEMA_VERSION}.`);
+  }
   validateValues(manifest.values, manifest.options, errors);
   validateFiles(manifest.files, errors);
+  validateManagedPaths(manifest.managedPaths, manifest.files, manifest.schemaVersion, errors);
+  validateProtectedPaths(manifest.protectedPaths, manifest.managedPaths, manifest.schemaVersion, errors);
   validateCustomTemplates(manifest.customTemplates, errors);
 
   if (errors.length > 0) return { ok: false, errors };
@@ -281,13 +365,27 @@ export function parseAndValidateManifest(raw) {
     options: { ...manifest.options },
     files: { ...manifest.files },
   };
+  if (manifest.managedPaths !== undefined) {
+    validatedManifest.managedPaths = [...manifest.managedPaths];
+  }
+  if (manifest.protectedPaths !== undefined) {
+    validatedManifest.protectedPaths = [...manifest.protectedPaths];
+  }
   if (manifest.customTemplates !== undefined) {
     validatedManifest.customTemplates = { ...manifest.customTemplates };
   }
   return { ok: true, manifest: validatedManifest };
 }
 
-export function createManifest({ generatorVersion, values, options, files, customTemplates }) {
+export function createManifest({
+  generatorVersion,
+  values,
+  options,
+  files,
+  customTemplates,
+  managedPaths,
+  protectedPaths,
+}) {
   const candidate = {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
     generatorVersion,
@@ -295,6 +393,8 @@ export function createManifest({ generatorVersion, values, options, files, custo
     options,
     files,
   };
+  candidate.managedPaths = managedPaths ?? Object.keys(files);
+  candidate.protectedPaths = protectedPaths ?? [];
   if (customTemplates !== undefined) candidate.customTemplates = customTemplates;
   const result = parseAndValidateManifest(candidate);
   if (!result.ok) {

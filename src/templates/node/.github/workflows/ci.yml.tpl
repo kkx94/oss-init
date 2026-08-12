@@ -21,8 +21,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm test
-      - run: npm run lint
+      - run: {{ciInstallCommand}}
+      - run: {{ciTestCommand}}
+{{ciLintStep}}
 
   windows:
     runs-on: windows-latest
@@ -31,8 +32,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24.x
-      - run: npm test
-      - run: npm run lint
+      - run: {{ciInstallCommand}}
+      - run: {{ciTestCommand}}
+{{ciLintStep}}
 
   CI:
     name: CI
