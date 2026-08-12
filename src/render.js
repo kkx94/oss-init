@@ -25,6 +25,22 @@ const README_SPEC = {
     { source: 'README.zh-CN.md.tpl', target: 'README.zh-CN.md' },
   ],
 };
+const ADOPT_README_SPEC = {
+  en: { source: 'README.md.adopt.tpl', target: 'README.md' },
+  zh: { source: 'README.zh-CN.md.adopt.tpl', target: 'README.md' },
+  bilingual: [
+    { source: 'README.md.adopt.tpl', target: 'README.md' },
+    { source: 'README.zh-CN.md.adopt.tpl', target: 'README.zh-CN.md' },
+  ],
+};
+const SPECIAL_COMMON_TEMPLATES = new Set([
+  'README.md.tpl',
+  'README.zh-CN.md.tpl',
+  'README.md.adopt.tpl',
+  'README.zh-CN.md.adopt.tpl',
+  'AGENTS.md.tpl',
+  'AGENTS.md.adopt.tpl',
+]);
 
 function readUtf8Template(path, label) {
   const buffer = readFileSync(path);
@@ -154,7 +170,15 @@ function shouldInclude(rel, { ci, publish }) {
   return ci || publish;
 }
 
+function shouldManageInAdoptMode(target, options) {
+  if (options.mode !== 'adopt') return true;
+  if (target === 'package.json' || target === 'pyproject.toml') return false;
+  if (target.startsWith('src/') || target.startsWith('test/') || target.startsWith('tests/')) return false;
+  return true;
+}
+
 function outputTemplatePath(sourceRel) {
+  if (sourceRel.endsWith('.adopt.tpl')) return sourceRel.slice(0, -'.adopt.tpl'.length);
   return sourceRel.endsWith('.tpl') ? sourceRel.slice(0, -4) : sourceRel;
 }
 
@@ -171,10 +195,15 @@ function addGenericSection(planned, section, files, options, errors) {
   const targetsWithinSection = new Map();
   for (const rel of [...files.keys()].sort()) {
     if (section === 'common') {
-      if (rel === 'README.md.tpl' || rel === 'README.zh-CN.md.tpl') continue;
+      if (SPECIAL_COMMON_TEMPLATES.has(rel)) continue;
       if (rel.startsWith('LICENSE.')) continue;
-      if (rel === 'AGENTS.md.tpl') continue;
     }
+    if (rel.endsWith('.adopt.tpl') && options.mode !== 'adopt') continue;
+    if (
+      options.mode === 'adopt'
+      && rel.endsWith('.tpl')
+      && files.has(`${rel.slice(0, -4)}.adopt.tpl`)
+    ) continue;
     if (!shouldInclude(rel, options)) continue;
 
     const target = outputTemplatePath(rel);
@@ -248,8 +277,17 @@ export function render({
   onlyMissing = false,
   dryRun = false,
   lang = 'node',
+  mode = 'init',
+  skipLicense = false,
 }) {
+  const effectiveValues = {
+    ciInstallCommand: lang === 'node' ? 'npm install' : 'python -m pip install -e ".[dev]"',
+    ciTestCommand: lang === 'node' ? 'npm test' : 'python -m unittest discover -s tests',
+    ciLintStep: lang === 'node' ? '      - run: npm run lint' : '',
+    ...values,
+  };
   const filesWritten = [];
+  const filesSkippedExisting = [];
   const warnings = [];
   const errors = [];
   const builtInCommon = readBuiltInSection(templateRoot, 'common');
@@ -259,7 +297,8 @@ export function render({
   const customLanguage = customSections.get(lang);
   const planned = new Map();
 
-  const readmeSpecs = Array.isArray(README_SPEC[docs]) ? README_SPEC[docs] : [README_SPEC[docs]];
+  const readmeSpec = mode === 'adopt' ? ADOPT_README_SPEC : README_SPEC;
+  const readmeSpecs = Array.isArray(readmeSpec[docs]) ? readmeSpec[docs] : [readmeSpec[docs]];
   for (const spec of readmeSpecs) {
     const content = customCommon.get(spec.source) ?? builtInCommon.get(spec.source);
     if (content === undefined) {
@@ -269,31 +308,35 @@ export function render({
     }
   }
 
-  const licenseSource = `LICENSE.${values.license}.tpl`;
-  const licenseContent = customCommon.get(licenseSource) ?? builtInCommon.get(licenseSource);
-  if (licenseContent === undefined) {
-    errors.push(`License template not found: ${licenseSource}. Choose --license mit or apache-2.0.`);
-  } else {
-    addPlanned(planned, 'LICENSE', licenseContent, `common/${licenseSource}`, errors);
-  }
-
-  if (agents) {
-    const agentsContent = customCommon.get('AGENTS.md.tpl') ?? builtInCommon.get('AGENTS.md.tpl');
-    if (agentsContent !== undefined) {
-      addPlanned(planned, 'AGENTS.md', agentsContent, 'common/AGENTS.md.tpl', errors);
+  if (!skipLicense) {
+    const licenseSource = `LICENSE.${effectiveValues.license}.tpl`;
+    const licenseContent = customCommon.get(licenseSource) ?? builtInCommon.get(licenseSource);
+    if (licenseContent === undefined) {
+      errors.push(`License template not found: ${licenseSource}. Choose --license mit or apache-2.0.`);
+    } else {
+      addPlanned(planned, 'LICENSE', licenseContent, `common/${licenseSource}`, errors);
     }
   }
 
-  addGenericSection(planned, 'common', builtInCommon, { ci, publish }, errors);
-  addGenericSection(planned, lang, builtInLanguage, { ci, publish }, errors);
-  addGenericSection(planned, 'common', customCommon, { ci, publish }, errors);
-  addGenericSection(planned, lang, customLanguage, { ci, publish }, errors);
+  if (agents) {
+    const agentsSource = mode === 'adopt' ? 'AGENTS.md.adopt.tpl' : 'AGENTS.md.tpl';
+    const agentsContent = customCommon.get(agentsSource) ?? builtInCommon.get(agentsSource);
+    if (agentsContent !== undefined) {
+      addPlanned(planned, 'AGENTS.md', agentsContent, `common/${agentsSource}`, errors);
+    }
+  }
+
+  addGenericSection(planned, 'common', builtInCommon, { ci, publish, mode }, errors);
+  addGenericSection(planned, lang, builtInLanguage, { ci, publish, mode }, errors);
+  addGenericSection(planned, 'common', customCommon, { ci, publish, mode }, errors);
+  addGenericSection(planned, lang, customLanguage, { ci, publish, mode }, errors);
 
   const renderedRecords = [];
   const renderedTargets = new Map();
   for (const record of [...planned.values()].sort((a, b) => a.target.localeCompare(b.target))) {
-    const renderedRecord = renderRecord(record, values, errors);
+    const renderedRecord = renderRecord(record, effectiveValues, errors);
     if (!renderedRecord) continue;
+    if (!shouldManageInAdoptMode(renderedRecord.renderedTarget, { mode })) continue;
     resolveContainedPath(targetDir, renderedRecord.renderedTarget);
     const existingSource = renderedTargets.get(renderedRecord.renderedTarget);
     if (existingSource) {
@@ -306,17 +349,28 @@ export function render({
     renderedRecords.push(renderedRecord);
   }
 
-  if (errors.length > 0) return { filesWritten, warnings, errors };
+  if (errors.length > 0) return { filesWritten, filesSkippedExisting, warnings, errors };
 
   for (const record of renderedRecords) {
     const outPath = resolveContainedPath(targetDir, record.renderedTarget);
-    if (onlyMissing && existsSync(outPath)) continue;
+    if (onlyMissing && existsSync(outPath)) {
+      filesSkippedExisting.push(record.renderedTarget);
+      continue;
+    }
     if (!dryRun) {
       mkdirSync(join(outPath, '..'), { recursive: true });
-      writeFileSync(outPath, record.rendered, { mode: 0o644 });
+      try {
+        writeFileSync(outPath, record.rendered, { mode: 0o644, flag: onlyMissing ? 'wx' : 'w' });
+      } catch (error) {
+        if (onlyMissing && error.code === 'EEXIST') {
+          filesSkippedExisting.push(record.renderedTarget);
+          continue;
+        }
+        throw error;
+      }
     }
     filesWritten.push(record.renderedTarget);
   }
 
-  return { filesWritten, warnings, errors };
+  return { filesWritten, filesSkippedExisting, warnings, errors };
 }

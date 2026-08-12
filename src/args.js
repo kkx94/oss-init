@@ -25,6 +25,21 @@ const CHECK_FLAGS = [
   { name: 'version', type: 'boolean', default: false },
 ];
 
+const ADOPT_FLAGS = [
+  { name: 'lang', type: 'value', values: ['node', 'python'], default: null },
+  { name: 'license', type: 'value', values: ['mit', 'apache-2.0'], default: null },
+  { name: 'docs', type: 'value', values: ['en', 'zh', 'bilingual'], default: 'en' },
+  { name: 'name', type: 'value', values: null, default: null },
+  { name: 'author', type: 'value', values: null, default: null },
+  { name: 'github-user', type: 'value', values: null, default: null },
+  { name: 'ci', type: 'boolean', default: false },
+  { name: 'publish', type: 'boolean', default: false },
+  { name: 'agents', type: 'boolean', default: true },
+  { name: 'dry-run', type: 'boolean', default: false },
+  { name: 'help', type: 'boolean', default: false },
+  { name: 'version', type: 'boolean', default: false },
+];
+
 const GLOBAL_FLAGS = [
   { name: 'help', type: 'boolean', default: false },
   { name: 'version', type: 'boolean', default: false },
@@ -151,6 +166,7 @@ export function parseArgs(argv, flagDefs = INIT_FLAG_DEFS) {
 
 export const INIT_FLAG_DEFS = INIT_FLAGS;
 export const CHECK_FLAG_DEFS = CHECK_FLAGS;
+export const ADOPT_FLAG_DEFS = ADOPT_FLAGS;
 export const GLOBAL_FLAG_DEFS = GLOBAL_FLAGS;
 
 export function isHelpOrVersion(flags) {

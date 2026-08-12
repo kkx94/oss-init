@@ -1,6 +1,6 @@
 # oss-init
 
-为 Node.js 和 Python 开源仓库生成、检查并安全更新中英双语基线。
+为 Node.js 和 Python 开源仓库生成、接入、检查并安全更新中英双语基线。
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
@@ -10,11 +10,12 @@
 ![许可证](https://img.shields.io/github/license/kkx94/oss-init)
 [![Node 版本](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 
-`oss-init` 提供三个相互配合的命令：
+`oss-init` 提供四个相互配合的命令：
 
 1. **生成**仓库基线，包含实际文档、社区文件、起步代码、测试和可选 GitHub Actions 工作流。
-2. **检查**现有仓库的 17 项开源卫生规则。分数只衡量文件是否齐全与基本文档质量，不代表项目重要性、安全性或采用情况。
-3. **更新**早期 `oss-init` 生成的文件，默认保留用户已修改的内容。
+2. **接入**已有 Node.js 或 Python 仓库，只补充缺失的维护文件，所有原有路径继续由用户所有。
+3. **检查**现有仓库的 17 项开源卫生规则。分数只衡量文件是否齐全与基本文档质量，不代表项目重要性、安全性或采用情况。
+4. **更新**早期 `oss-init` 生成或接入的文件，默认保留用户已修改的内容。
 
 该 CLI 没有运行时依赖，也不需要构建步骤，支持 Node.js 22 及更高版本。仓库还提供一个零依赖 GitHub Action，可在 CI 中强制执行卫生检查。
 
@@ -37,7 +38,7 @@ npm install --global @kkx94/oss-init
 
 ## 可重现 Demo
 
-在源码检出目录运行一条命令，即可端到端验证真实 CLI。Demo 会在临时目录生成 Node.js 和 Python 仓库，运行生成的测试，确认卫生分数为 100/100，预览安全更新，然后删除临时文件。该流程不使用网络，也不修改当前仓库。
+在源码检出目录运行一条命令，即可端到端验证真实 CLI。Demo 会在临时目录生成 Node.js 和 Python 仓库，安全接入一个已有项目且不修改其包元数据，运行生成的测试，确认卫生分数，预览安全更新，然后删除临时文件。该流程不使用网络，也不修改当前仓库。
 
 ```bash
 npm run demo
@@ -50,6 +51,7 @@ npm run demo
 ✓ 生成的 Node.js 测试通过
 ✓ node-demo 卫生检查通过 (100/100)
 ✓ 安全更新预览完成，未修改文件
+✓ 已接入现有 Node.js 仓库，未替换包元数据
 ✓ 已生成双语 Python 仓库
 ✓ 生成的 Python 测试通过
 ✓ python-demo 卫生检查通过 (100/100)
@@ -104,6 +106,33 @@ oss-init my-project --lang node --ci  # 非交互式
 
 生成的 Node.js CI 在 Linux 上测试 Node.js 22 和 24，并在 Windows 上测试 Node.js 24。生成的 Python CI 在 Linux 上测试 Python 3.10 至 3.13，并在 Windows 上测试 Python 3.13。两者都提供稳定的聚合检查名 `CI`，可用于分支保护。
 
+### 接入已有仓库
+
+`adopt` 让并非由 oss-init 创建的仓库也能进入安全维护周期：
+
+```bash
+oss-init adopt . --dry-run       # 检查所有计划新增内容
+oss-init adopt . --ci            # 补充缺失的社区文件和 CI
+oss-init adopt . --lang python   # 为 Node.js/Python 混合仓库指定类型
+```
+
+该命令读取 `package.json` 或 `pyproject.toml` 的 PEP 621 `[project]` 表，并尽可能识别项目名称、描述、作者、许可证和 GitHub 所有者。混合仓库必须通过 `--lang` 消除歧义；无法识别许可证时必须显式提供 `--license`。
+
+使用 `--ci` 时，接入流程会从已有仓库推导命令，而不会假设项目采用起步模板的配置。Node.js 项目必须有 `test` script；工具会根据 `packageManager` 和锁文件选择 npm、pnpm 或 Yarn，只在存在 `lint` script 时运行 lint。Python 项目必须能识别出 pytest 或 unittest 测试及相应安装方式。配置不完整或存在歧义时，会在写入任何文件前停止。发布自动化不会被猜测：`adopt --publish` 会零写入退出，因为发布凭据与命令属于项目专用配置。
+
+接入不会覆盖任何已有文件，也不会生成起步源码、测试、`package.json` 或 `pyproject.toml`。schema v3 会同时记录 oss-init 创建的文件，以及接入前已经属于仓库的模板路径。未来 `update` 可以安全加入新出现的维护文件，但即使执行 `update --force`，也不会接管接入前已有的路径。
+
+| 选项 | 说明 |
+|---|---|
+| `--lang <node\|python>` | 同时存在两类项目清单时选择项目类型 |
+| `--license <mit\|apache-2.0>` | 仅在项目没有许可证时选择要添加的许可证 |
+| `--docs <en\|zh\|bilingual>` | 缺少 README 时使用的语言；默认 `en` |
+| `--name`、`--author`、`--github-user` | 覆盖无法正确检测的元数据 |
+| `--ci` | 仅在能推导出受支持的安装和测试方式时添加 CI |
+| `--publish` | 接入模式不支持；不会写入文件 |
+| `--no-agents` | 不添加 `AGENTS.md` |
+| `--dry-run` | 只预览，不写文件和 manifest |
+
 ### 叠加组织模板
 
 使用 `--template <dir>` 可以保留内置基线，同时替换单个文件或添加组织专用文件。自定义目录沿用内置的 `common/`、`node/` 和 `python/` 结构：
@@ -127,7 +156,7 @@ oss-init my-service --lang node --template ./company-templates
 
 ### 更新已生成的仓库
 
-`init` 会写入 schema v2 的 `.oss-init.json` manifest，其中包含标准化的项目身份、渲染选项、SHA-256 哈希和可选的可移植自定义模板快照。schema v1 仍然兼容，读取时也会迁移 v0.2.x 和 v0.3.0 写入的 manifest。
+`init` 和 `adopt` 会写入 schema v3 的 `.oss-init.json` manifest，其中包含标准化项目身份、渲染选项、SHA-256 哈希、明确的路径所有权和可选的可移植自定义模板快照。schema v1 与 v2 仍然兼容，更新时会迁移 v0.2.x 至 v0.4.x 写入的 manifest。
 
 ```bash
 oss-init update                # 更新仍未被用户修改的生成文件
@@ -201,6 +230,10 @@ oss-init my-lib --ci --github
 
 # 检查现有仓库，并且只添加缺失文件
 oss-init check --fix
+
+# 将已有仓库接入安全更新周期
+oss-init adopt . --dry-run
+oss-init adopt . --ci
 ```
 
 ## 开发
@@ -234,6 +267,7 @@ npm pack --dry-run --json
 - [x] 带 manifest 迁移的安全生成文件更新
 - [x] 跨平台生成 CI
 - [x] 自定义模板目录（[#3](https://github.com/kkx94/oss-init/issues/3)）
+- [x] 安全接入已有 Node.js 与 Python 仓库
 - [ ] `check` 可配置规则集
 - [ ] 根据用户需求增加其他语言模板
 

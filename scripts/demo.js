@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -100,6 +100,27 @@ try {
 
   runCli(['update', 'node-demo', '--dry-run'])
   process.stdout.write('✓ Safe refresh preview completed without changing files\n\n')
+
+  const existingDir = join(workspace, 'existing-demo')
+  mkdirSync(existingDir)
+  const existingPackage = JSON.stringify({
+    name: 'existing-demo',
+    version: '7.0.0',
+    description: 'An existing project used by the adoption demo.',
+    license: 'MIT',
+    repository: 'https://github.com/demo-user/existing-demo',
+    scripts: { test: 'node --test' },
+  }, null, 2) + '\n'
+  writeFileSync(join(existingDir, 'package.json'), existingPackage)
+  runCli(['adopt', 'existing-demo', '--ci', '--no-agents'])
+  if (readFileSync(join(existingDir, 'package.json'), 'utf8') !== existingPackage) {
+    throw new Error('adopt replaced the existing package.json')
+  }
+  runCli(['update', 'existing-demo', '--dry-run', '--force'])
+  if (readFileSync(join(existingDir, 'package.json'), 'utf8') !== existingPackage) {
+    throw new Error('update attempted to manage the pre-existing package.json')
+  }
+  process.stdout.write('✓ Existing Node.js repository adopted without replacing package metadata\n\n')
 
   runCli([
     'init',
